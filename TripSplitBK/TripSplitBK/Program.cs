@@ -3,7 +3,6 @@ using TripSplitBK.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -12,17 +11,15 @@ builder.Services.AddHttpClient();
 builder.Services.AddDbContext<TripSplitDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// 先全部開放 CORS，測試用
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("TripSplitCors", policy =>
     {
-        policy.WithOrigins(
-                "http://127.0.0.1:5500",
-                "http://localhost:5500",
-                "https://potatoshenru.github.io"
-            )
-            .AllowAnyMethod()
-            .AllowAnyHeader();
+        policy
+            .SetIsOriginAllowed(origin => true)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
@@ -35,16 +32,29 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-// Configure the HTTP request pipeline.
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseCors("TripSplitCors");
-app.UseStaticFiles();
-app.UseHttpsRedirection();
-app.UseAuthorization();
-app.MapControllers();
+// 後端沒有 HTTPS，先不要開這行
+// app.UseHttpsRedirection();
 
-app.MapGet("/api/ping", () => Results.Ok(new { ok = true, message = "TripSplit API is running.", time = DateTime.UtcNow }));
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseCors("TripSplitCors");
+
+app.UseAuthorization();
+
+app.MapControllers()
+   .RequireCors("TripSplitCors");
+
+app.MapGet("/api/ping", () => Results.Ok(new
+{
+    ok = true,
+    message = "TripSplit API is running.",
+    time = DateTime.UtcNow
+}))
+.RequireCors("TripSplitCors");
 
 app.Run();
