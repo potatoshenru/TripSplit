@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TripSplitBK.Data;
 
@@ -11,9 +12,11 @@ using TripSplitBK.Data;
 namespace TripSplitBK.Migrations
 {
     [DbContext(typeof(TripSplitDbContext))]
-    partial class TripSplitDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260528155922_SeedGsDefaultData")]
+    partial class SeedGsDefaultData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
