@@ -14,8 +14,16 @@ builder.Services.AddDbContext<TripSplitDbContext>(options =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+    options.AddPolicy("TripSplitCors", policy =>
+    {
+        policy.WithOrigins(
+                "http://127.0.0.1:5500",
+                "http://localhost:5500",
+                "https://potatoshenru.github.io"
+            )
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
 });
 
 var app = builder.Build();
@@ -31,7 +39,7 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseCors();
+app.UseCors("TripSplitCors");
 app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseAuthorization();
