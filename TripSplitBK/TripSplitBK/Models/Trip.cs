@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using TripSplitBK.Utils;
 
 namespace TripSplitBK.Models;
 
@@ -21,8 +20,8 @@ public class Trip
     [MaxLength(100)]
     public string CreatedBy { get; set; } = string.Empty;
 
-    public DateTime CreatedAt { get; set; } = TaipeiTimeUtil.GetCurrentTime();
-    public DateTime UpdatedAt { get; set; } = TaipeiTimeUtil.GetCurrentTime();
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool IsArchived { get; set; }
 
     public ICollection<Member> Members { get; set; } = new List<Member>();
