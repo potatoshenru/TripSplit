@@ -79,7 +79,7 @@
             </form>
 
             <div class="notice" id="sync-status"><span class="status-dot"></span>正在準備旅遊資料...</div>
-            <div class="backend-note">資料隔離方式：每筆成員、分類、付款方式、支出都會帶 `trip_id`。切換旅遊時，用目前選到的 `trip_id` 重新讀取 Google Sheet。</div>
+            <div class="backend-note">資料隔離方式：每筆成員、分類、付款方式、支出都會帶 `trip_id`。切換旅遊時，用目前選到的 `trip_id` 重新讀取 雲端 API。</div>
           </div>
         </section>
 
@@ -146,7 +146,7 @@
                 <div class="field full">
                   <label for="receipt-files">收據照片上傳</label>
                   <div class="upload-box">
-                    <div class="upload-head"><span class="upload-icon">📷</span><div><strong>上傳收據照片</strong><span>支援手機拍照或從相簿選擇；後端可上傳到 Google Drive。</span></div></div>
+                    <div class="upload-head"><span class="upload-icon">📷</span><div><strong>上傳收據照片</strong><span>支援手機拍照或從相簿選擇；後端可上傳到 雲端。</span></div></div>
                     <input id="receipt-files" type="file" accept="image/*" capture="environment" multiple />
                     <div class="receipt-preview" id="receipt-preview"></div>
                   </div>
