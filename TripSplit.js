@@ -1,4 +1,4 @@
-const GAS_DEPLOYMENT_ID = 'AKfycbx7i6dVp3QgLrfLILcgQw-pcr96ErSY92xsXNU9ZYCFCeufQjhAULBp4JHsNwXcf-ARQw';
+const GAS_DEPLOYMENT_ID = 'AKfycbwl5D6QM-Yu-nwJVoaOz2rg48JjEa-y0Pzh0HWTTBw6S37zt46Vu3XZ-4-wEfcfP60L-g';
 const GAS_WEB_APP_URL = `https://script.google.com/macros/s/${GAS_DEPLOYMENT_ID}/exec`;
 
 const GAS_WEB_APP_URLS = [GAS_WEB_APP_URL];
