@@ -1,0 +1,6 @@
+@TripSplitBK_HostAddress = http://localhost:5186
+
+GET {{TripSplitBK_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
