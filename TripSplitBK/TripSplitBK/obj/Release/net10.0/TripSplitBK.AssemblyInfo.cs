@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TripSplitBK")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+95d1a2c80c595913f5a3fc1292456b20cb5d28a8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d8063ff0db792bd249b2a45ba9bee1d8f8655fb2")]
 [assembly: System.Reflection.AssemblyProductAttribute("TripSplitBK")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TripSplitBK")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

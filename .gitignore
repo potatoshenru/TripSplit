@@ -3,3 +3,8 @@
 ################################################################################
 
 /.vs
+
+# TripSplitBK
+TripSplitBK/.vs/
+TripSplitBK/TripSplitBK/bin/
+TripSplitBK/TripSplitBK/obj/

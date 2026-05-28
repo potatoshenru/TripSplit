@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "D:\\Code\\TripSplit\\TripSplitBK\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{166AAD35-1C8D-AFA1-70D5-01943EB6BD79}|TripSplitBK\\TripSplitBK.csproj|d:\\code\\tripsplit\\tripsplitbk\\tripsplitbk\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{166AAD35-1C8D-AFA1-70D5-01943EB6BD79}|TripSplitBK\\TripSplitBK.csproj|solutionrelative:tripsplitbk\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{166AAD35-1C8D-AFA1-70D5-01943EB6BD79}|TripSplitBK\\TripSplitBK.csproj|d:\\code\\tripsplit\\tripsplitbk\\tripsplitbk\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{166AAD35-1C8D-AFA1-70D5-01943EB6BD79}|TripSplitBK\\TripSplitBK.csproj|solutionrelative:tripsplitbk\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{166AAD35-1C8D-AFA1-70D5-01943EB6BD79}|TripSplitBK\\TripSplitBK.csproj|d:\\code\\tripsplit\\tripsplitbk\\tripsplitbk\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{166AAD35-1C8D-AFA1-70D5-01943EB6BD79}|TripSplitBK\\TripSplitBK.csproj|solutionrelative:tripsplitbk\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     }
   ],
   "DocumentGroupContainers": [
@@ -18,7 +18,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 5,
+          "SelectedChildIndex": 6,
           "Children": [
             {
               "$type": "Bookmark",
@@ -42,28 +42,29 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "launchSettings.json",
               "DocumentMoniker": "D:\\Code\\TripSplit\\TripSplitBK\\TripSplitBK\\Properties\\launchSettings.json",
               "RelativeDocumentMoniker": "TripSplitBK\\Properties\\launchSettings.json",
               "ToolTip": "D:\\Code\\TripSplit\\TripSplitBK\\TripSplitBK\\Properties\\launchSettings.json",
               "RelativeToolTip": "TripSplitBK\\Properties\\launchSettings.json",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2026-05-28T15:21:46.42Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "Program.cs",
               "DocumentMoniker": "D:\\Code\\TripSplit\\TripSplitBK\\TripSplitBK\\Program.cs",
               "RelativeDocumentMoniker": "TripSplitBK\\Program.cs",
               "ToolTip": "D:\\Code\\TripSplit\\TripSplitBK\\TripSplitBK\\Program.cs",
               "RelativeToolTip": "TripSplitBK\\Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABIAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-28T15:17:43.56Z"
+              "WhenOpened": "2026-05-28T15:17:43.56Z",
+              "EditorCaption": ""
             }
           ]
         }
