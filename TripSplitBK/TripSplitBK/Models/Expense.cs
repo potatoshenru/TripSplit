@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using TripSplitBK.Utils;
 
 namespace TripSplitBK.Models;
 
@@ -53,7 +54,7 @@ public class Expense
     [MaxLength(500)]
     public string Note { get; set; } = string.Empty;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; } = TaipeiTimeUtil.GetCurrentTime();
 
     [ForeignKey(nameof(TripId))]
     public Trip? Trip { get; set; }
