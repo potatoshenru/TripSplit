@@ -797,6 +797,57 @@ function getSelectedParticipants() {
   return Array.from(document.querySelectorAll('#participant-options input:checked')).map(input => input.value);
 }
 
+function distributeIntegerPercent(count) {
+  if (!count) return [];
+  const base = Math.floor(100 / count);
+  let remainder = 100 - (base * count);
+
+  return Array.from({ length: count }, () => {
+    const value = base + (remainder > 0 ? 1 : 0);
+    remainder -= 1;
+    return value;
+  });
+}
+
+function distributeAmount(totalAmount, count) {
+  if (!count) return [];
+  const roundedTotal = Math.round(Number(totalAmount || 0) * 100) / 100;
+  const base = Math.floor((roundedTotal / count) * 100) / 100;
+  let remaining = roundedTotal;
+
+  return Array.from({ length: count }, (_, index) => {
+    const value = index === count - 1 ? remaining : base;
+    remaining = Math.round((remaining - value) * 100) / 100;
+    return Math.round(value * 100) / 100;
+  });
+}
+
+function formatAmountValue(value) {
+  const number = Number(value || 0);
+  return Number.isInteger(number) ? String(number) : number.toFixed(2);
+}
+
+function updateSplitSummary() {
+  const summary = $('#split-summary');
+  if (!summary) return;
+
+  const inputs = Array.from(document.querySelectorAll('#split-config .split-input'));
+  const kind = inputs[0]?.dataset.kind || '';
+  const total = inputs.reduce((sum, input) => sum + Number(input.value || 0), 0);
+
+  if (kind === 'percent') {
+    const diff = Math.round((100 - total) * 100) / 100;
+    summary.textContent = `目前合計 ${formatAmountValue(total)}%，${diff === 0 ? '剛好 100%' : diff > 0 ? `還差 ${formatAmountValue(diff)}%` : `多出 ${formatAmountValue(Math.abs(diff))}%`}。`;
+    return;
+  }
+
+  if (kind === 'amount') {
+    const target = Number($('#amount-original').value || 0);
+    const diff = Math.round((target - total) * 100) / 100;
+    summary.textContent = `目前合計 ${formatAmountValue(total)}，${diff === 0 ? '剛好等於原始金額' : diff > 0 ? `還差 ${formatAmountValue(diff)}` : `多出 ${formatAmountValue(Math.abs(diff))}`}。`;
+  }
+}
+
 function handleReceiptImageError(event) {
   const image = event.target;
   const candidates = JSON.parse(image.dataset.candidates || '[]');
@@ -857,20 +908,23 @@ function renderSplitConfig() {
   const container = $('#split-config');
   if (!container) return;
 
-  if (!selected.length) {
+  if (!selected.length || splitType === '平均分') {
     container.innerHTML = '';
     container.style.display = 'none';
     return;
   }
 
   const isPercent = splitType === '百分比分';
-  const isCustomAmount = splitType === '自訂金額';
-  const kind = isPercent ? 'percent' : isCustomAmount ? 'amount' : 'equal';
+  const kind = isPercent ? 'percent' : 'amount';
+  const defaultValues = isPercent
+    ? distributeIntegerPercent(selected.length)
+    : distributeAmount(Number($('#amount-original').value || 0), selected.length);
+
   container.style.display = 'grid';
   container.innerHTML = `
-    <label>${isPercent ? '請輸入每位比例（%）' : isCustomAmount ? '請輸入每位金額（原始幣別）' : '平均分（可留空，系統自動平均）'}</label>
+    <label>${isPercent ? '請輸入每位比例（%）' : '請輸入每位金額（原始幣別）'}</label>
     <div class="split-input-grid">
-      ${selected.map(name => `
+      ${selected.map((name, index) => `
         <div class="split-input-row">
           <span>${name} 分攤</span>
           <input
@@ -879,15 +933,16 @@ function renderSplitConfig() {
             data-member="${name}"
             data-kind="${kind}"
             min="0"
-            step="0.01"
-            placeholder="${isPercent ? '例如 33.33' : isCustomAmount ? '例如 1200' : '平均分可留空'}"
-            ${kind === 'equal' ? 'disabled' : ''}
+            step="${isPercent ? '1' : '0.01'}"
+            value="${isPercent ? defaultValues[index] : formatAmountValue(defaultValues[index])}"
+            placeholder="${isPercent ? '例如 25' : '例如 1200'}"
           />
         </div>
       `).join('')}
     </div>
-    <p class="field-hint">${isPercent ? '所有比例加總需為 100%。' : isCustomAmount ? '建議加總等於原始金額。' : '將依已勾選成員平均分攤。'}</p>
+    <p class="field-hint" id="split-summary"></p>
   `;
+  updateSplitSummary();
 }
 
 function validateSplitInputs(splitType, totalAmount) {
@@ -1218,13 +1273,24 @@ document.addEventListener('click', async (event) => {
   await saveThenReload(actionMap[type], payloadMap[type]);
 });
 
-$('#amount-original').addEventListener('input', updateExchangePreview);
+$('#amount-original').addEventListener('input', () => {
+  updateExchangePreview();
+  const splitType = document.querySelector('input[name="split_type"]:checked')?.value || '平均分';
+  if (splitType === '自訂金額') {
+    renderSplitConfig();
+  } else {
+    updateSplitSummary();
+  }
+});
 $('#expense-currency').addEventListener('change', updateExchangePreview);
 $('#participant-options').addEventListener('change', (event) => {
   if (event.target.matches('input[type="checkbox"]')) renderSplitConfig();
 });
 document.querySelectorAll('input[name="split_type"]').forEach(input => {
   input.addEventListener('change', renderSplitConfig);
+});
+$('#split-config').addEventListener('input', (event) => {
+  if (event.target.matches('.split-input')) updateSplitSummary();
 });
 $('#receipt-files').addEventListener('change', (event) => {
   appendReceiptFiles(event.target.files || []);
