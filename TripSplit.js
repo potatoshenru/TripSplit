@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://tripsplit.runasp.net/api';
+const API_BASE_URL = 'https://www.tripsplit.somee.com/api';
 
 console.log('TripSplit API endpoint:', API_BASE_URL);
 
