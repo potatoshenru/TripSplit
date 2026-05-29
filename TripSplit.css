@@ -165,6 +165,31 @@ input[type="file"]::file-selector-button {
 .upload-icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 15px; color: var(--primary-dark); background: var(--primary-soft); font-size: 1.25rem; }
 .upload-head strong { display: block; color: var(--text); line-height: 1.25; }
 .upload-head span { color: var(--muted); font-size: 0.9rem; }
+.upload-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.upload-trigger {
+  display: inline-grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--primary);
+  border-radius: 14px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+}
+.upload-trigger.secondary {
+  background: var(--white);
+  color: var(--primary-dark);
+}
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
 .receipt-preview { display: none; gap: 10px; flex-wrap: wrap; }
 .receipt-preview-item {
   position: relative;

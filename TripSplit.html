@@ -144,10 +144,15 @@
                 <div class="field"><label for="rate-preview">系統套用匯率</label><input id="rate-preview" type="text" readonly /></div>
                 <div class="field"><label for="amount-twd">換算台幣</label><input id="amount-twd" type="text" readonly /></div>
                 <div class="field full">
-                  <label for="receipt-files">收據照片上傳</label>
+                  <label>收據照片上傳</label>
                   <div class="upload-box">
-                    <div class="upload-head"><span class="upload-icon">📷</span><div><strong>上傳收據照片</strong><span>支援手機拍照或從相簿選擇；後端可上傳到 Google Drive。</span></div></div>
-                    <input id="receipt-files" type="file" accept="image/*" capture="environment" multiple />
+                    <div class="upload-head"><span class="upload-icon">📷</span><div><strong>上傳收據照片</strong><span>可從相簿選擇，或直接開啟相機拍照；後端可上傳到 Google Drive。</span></div></div>
+                    <div class="upload-actions">
+                      <label class="upload-trigger" for="receipt-files">選擇相簿</label>
+                      <label class="upload-trigger secondary" for="receipt-camera-files">開啟相機</label>
+                    </div>
+                    <input id="receipt-files" class="file-input" type="file" accept="image/*" multiple />
+                    <input id="receipt-camera-files" class="file-input" type="file" accept="image/*" capture="environment" />
                     <div class="receipt-preview" id="receipt-preview"></div>
                   </div>
                 </div>

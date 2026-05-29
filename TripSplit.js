@@ -1142,6 +1142,7 @@ function clearReceiptFiles() {
   selectedReceiptFiles = [];
   renderReceiptPreview();
   if ($('#receipt-files')) $('#receipt-files').value = '';
+  if ($('#receipt-camera-files')) $('#receipt-camera-files').value = '';
 }
 
 async function getReceiptPayloads() {
@@ -1292,9 +1293,11 @@ document.querySelectorAll('input[name="split_type"]').forEach(input => {
 $('#split-config').addEventListener('input', (event) => {
   if (event.target.matches('.split-input')) updateSplitSummary();
 });
-$('#receipt-files').addEventListener('change', (event) => {
-  appendReceiptFiles(event.target.files || []);
-  event.target.value = '';
+['#receipt-files', '#receipt-camera-files'].forEach(selector => {
+  $(selector)?.addEventListener('change', (event) => {
+    appendReceiptFiles(event.target.files || []);
+    event.target.value = '';
+  });
 });
 
 document.addEventListener('keydown', (event) => {
