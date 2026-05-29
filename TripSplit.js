@@ -13,6 +13,7 @@ function buildGasUrl(baseUrl, query) {
 }
 
 let currentTripId = localStorage.getItem('tripsplit_current_trip_id') || 'trip_default';
+let shouldSelectLatestTripOnLoad = true;
 
 let trips = [
   { id: 'trip_default', name: '東京五日遊', baseCurrency: 'TWD' },
@@ -63,6 +64,25 @@ const fallbackDataByTrip = {
 const money = new Intl.NumberFormat('zh-TW');
 const $ = (selector) => document.querySelector(selector);
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+function getStoredTripModifiedTimes() {
+  try {
+    return JSON.parse(localStorage.getItem('tripsplit_trip_modified_at') || '{}') || {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function getStoredTripModifiedAt(tripId) {
+  return getStoredTripModifiedTimes()[tripId] || '';
+}
+
+function markTripModified(tripId) {
+  if (!tripId) return;
+  const modifiedTimes = getStoredTripModifiedTimes();
+  modifiedTimes[tripId] = new Date().toISOString();
+  localStorage.setItem('tripsplit_trip_modified_at', JSON.stringify(modifiedTimes));
+}
 
 function currentTrip() {
   return trips.find(trip => trip.id === currentTripId) || trips[0];
@@ -202,19 +222,49 @@ async function loadTrips() {
     const data = await jsonp('getTrips', {});
     const rows = Array.isArray(data) ? data : data.trips || [];
     if (rows.length) {
-      trips = rows.map(row => ({
-        id: row.trip_id || row.id,
-        name: row.trip_name || row.name,
-        baseCurrency: row.base_currency || 'TWD'
-      })).filter(trip => trip.id && trip.name);
+      trips = rows.map(normalizeTrip).filter(trip => trip.id && trip.name);
     }
   } catch (error) {
     console.warn(error);
   }
 
+  if (shouldSelectLatestTripOnLoad) {
+    currentTripId = getLatestTripId() || currentTripId;
+    localStorage.setItem('tripsplit_current_trip_id', currentTripId);
+    shouldSelectLatestTripOnLoad = false;
+  }
+
   if (!trips.some(trip => trip.id === currentTripId)) currentTripId = trips[0].id;
   renderTripSelect();
   loadArchivedTrips();
+}
+
+function normalizeTrip(row) {
+  const id = row.trip_id || row.id;
+  return {
+    id,
+    name: row.trip_name || row.name,
+    baseCurrency: row.base_currency || 'TWD',
+    updatedAt: row.updated_at || row.updatedAt || row.modified_at || row.modifiedAt || row.last_modified || row.lastModified || row.created_at || row.createdAt || getStoredTripModifiedAt(id) || ''
+  };
+}
+
+function getTripSortTime(trip) {
+  const updatedTime = Date.parse(trip.updatedAt || '');
+  if (Number.isFinite(updatedTime)) return updatedTime;
+
+  const idTimestamp = Number(String(trip.id || '').replace(/^trip_/, ''));
+  return Number.isFinite(idTimestamp) ? idTimestamp : 0;
+}
+
+function getLatestTripId() {
+  if (!trips.length) return '';
+
+  return [...trips].sort((a, b) => {
+    const timeDiff = getTripSortTime(b) - getTripSortTime(a);
+    if (timeDiff) return timeDiff;
+    return trips.indexOf(b) - trips.indexOf(a);
+  })[0].id;
 }
 
 async function loadArchivedTrips() {
@@ -488,6 +538,7 @@ async function saveThenReload(action, payload, delay = 900) {
             await wait(delay);
         }
 
+        markTripModified(payload.trip_id || currentTripId);
         await loadCurrentTripData();
         setStatus('資料已同步到 Google Sheet。', 'success');
 
@@ -551,20 +602,19 @@ function updateFormDisabledState() {
 }
 
 function renderTripSelect() {
-  // 排序旅遊：最新的在前面
+  // 排序旅遊：最後修改或建立的帳本放在最下面
   const sortedTrips = [...trips].sort((a, b) => {
-    // 提取 ID 中的時間戳記部分
-    const aTimestamp = parseInt(a.id.replace('trip_', '')) || 0;
-    const bTimestamp = parseInt(b.id.replace('trip_', '')) || 0;
+    const aTimestamp = getTripSortTime(a);
+    const bTimestamp = getTripSortTime(b);
 
-    // 時間戳記都存在：按時間戳記倒序（新的在前）
+    // 時間都存在：舊的在前，新的在後
     if (aTimestamp && bTimestamp) {
-      return bTimestamp - aTimestamp;
+      return aTimestamp - bTimestamp;
     }
 
-    // 只有一個有時間戳記：有時間戳記的排在前
-    if (aTimestamp && !bTimestamp) return -1;
-    if (!aTimestamp && bTimestamp) return 1;
+    // 只有一個有時間：有時間的排在後面
+    if (aTimestamp && !bTimestamp) return 1;
+    if (!aTimestamp && bTimestamp) return -1;
 
     // 都沒有時間戳記：保持原始順序
     return trips.indexOf(a) - trips.indexOf(b);
@@ -1065,6 +1115,7 @@ $('#trip-create-form').addEventListener('submit', async (event) => {
   input.value = '';
   trips.push({ id: newTripId, name, baseCurrency: 'TWD' });
   currentTripId = newTripId;
+  markTripModified(currentTripId);
   localStorage.setItem('tripsplit_current_trip_id', currentTripId);
   renderAll();
   try {
