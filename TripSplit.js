@@ -72,6 +72,7 @@ function setStatus(message, type = 'info') {
   const notice = $('#sync-status');
   if (!notice) return;
   const dotColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--orange)';
+  notice.classList.toggle('is-floating', type !== 'success');
   notice.innerHTML = `<span class="status-dot" style="background:${dotColor}"></span>${message}`;
 }
 

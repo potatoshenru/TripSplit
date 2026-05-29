@@ -193,6 +193,16 @@ input[type="file"]::file-selector-button {
   border-radius: 16px; background: #fff3d7; border: 1px solid #efd6aa; color: #7a4b12; font-size: 0.9rem; font-weight: 900;
 }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+#sync-status.is-floating {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 80;
+  width: min(560px, calc(100% - 28px));
+  margin: 0;
+  box-shadow: 0 14px 32px rgba(92, 64, 32, 0.18);
+  transform: translateX(-50%);
+}
 
 .expense-list { display: grid; gap: 12px; }
 .expense-item {
