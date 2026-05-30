@@ -1,0 +1,7 @@
+.main-layout { display: grid; grid-template-columns: 315px 1fr; gap: 22px; padding: 20px 0 64px; align-items: start; }
+.sidebar, .content-stack { display: grid; gap: 18px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+.card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 20px 20px 0; margin-bottom: 16px; }
+.card-title h2, .card-title h3 { font-size: 1.1rem; line-height: 1.25; letter-spacing: -0.02em; }
+.card-title p { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+.card-body { padding: 0 20px 20px; }

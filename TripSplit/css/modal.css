@@ -1,0 +1,48 @@
+.receipt-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: none;
+}
+.receipt-modal.show { display: block; }
+.receipt-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 15, 10, 0.6);
+}
+.receipt-modal-panel {
+  position: relative;
+  width: min(92vw, 760px);
+  max-height: 90vh;
+  margin: 5vh auto;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.receipt-modal-close {
+  justify-self: end;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: #f2e5d1;
+  color: #6b5742;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.receipt-modal-close:hover { background: #f3d6cf; color: var(--red); }
+#receipt-modal-image {
+  width: 100%;
+  max-height: 66vh;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+.receipt-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}

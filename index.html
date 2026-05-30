@@ -1,0 +1,1435 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f8efe3" />
+  <meta name="description" content="TripSplit 旅行工具箱首頁，集中管理旅遊記帳、分帳與未來擴充的旅行小工具。" />
+  <title>TripSplit｜旅行工具箱</title>
+
+  <style>
+    :root {
+      /* 統一色系：奶茶白底色 + 奶茶棕主色 + 焦糖奶泡輔色 */
+      --bg: #f8efe3;
+      --bg-2: #fffaf3;
+      --card: rgba(255, 250, 242, 0.78);
+      --card-strong: rgba(255, 250, 242, 0.94);
+      --text: #3f3028;
+      --muted: #7f6a5a;
+      --soft: rgba(63, 48, 40, 0.74);
+      --line: rgba(138, 103, 73, 0.18);
+      --brand: #b8895f;
+      --brand-rgb: 184, 137, 95;
+      --brand-2: #d9b98f;
+      --brand-2-rgb: 217, 185, 143;
+      --brand-3: #fff0d8;
+      --danger: #c9796c;
+      --success: var(--brand);
+      --shadow: 0 24px 80px rgba(103, 72, 45, 0.18);
+      --radius-xl: 32px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --max-width: 1160px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family:
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Noto Sans TC",
+        "PingFang TC",
+        "Microsoft JhengHei",
+        sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(var(--brand-rgb), 0.28), transparent 28rem),
+        radial-gradient(circle at 82% 10%, rgba(var(--brand-2-rgb), 0.34), transparent 30rem),
+        radial-gradient(circle at 70% 82%, rgba(255, 246, 234, 0.82), transparent 26rem),
+        linear-gradient(135deg, var(--bg), #fffaf3 48%, var(--bg-2));
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(138, 103, 73, 0.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(138, 103, 73, 0.055) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.42), transparent 74%);
+      z-index: -3;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .page {
+      position: relative;
+      isolation: isolate;
+    }
+
+    .aurora {
+      position: fixed;
+      width: 34rem;
+      height: 34rem;
+      border-radius: 999px;
+      filter: blur(44px);
+      opacity: 0.36;
+      z-index: -2;
+      animation: float 12s ease-in-out infinite alternate;
+    }
+
+    .aurora.one {
+      left: -10rem;
+      top: 5rem;
+      background: #dfbd96;
+    }
+
+    .aurora.two {
+      right: -13rem;
+      top: 19rem;
+      background: #d9b98f;
+      animation-delay: -4s;
+    }
+
+    .aurora.three {
+      left: 42%;
+      bottom: -18rem;
+      background: #fff0d8;
+      animation-delay: -8s;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+      100% {
+        transform: translate3d(2rem, -1.5rem, 0) scale(1.08);
+      }
+    }
+
+    .container {
+      width: min(calc(100% - 40px), var(--max-width));
+      margin: 0 auto;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(18px);
+      background: rgba(255, 250, 242, 0.78);
+      border-bottom: 1px solid rgba(138, 103, 73, 0.12);
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 76px;
+      gap: 18px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background:
+        linear-gradient(135deg, rgba(var(--brand-rgb), 0.16), rgba(var(--brand-2-rgb), 0.24)),
+        rgba(255, 250, 242, 0.86);
+      box-shadow: 0 14px 40px rgba(var(--brand-rgb), 0.12);
+    }
+
+    .brand small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .nav-links a {
+      padding: 10px 12px;
+      border-radius: 999px;
+      transition: 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+      background: rgba(255, 250, 242, 0.72);
+    }
+
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border: 1px solid rgba(138, 103, 73, 0.24);
+      border-radius: 999px;
+      color: #3f3028;
+      background: linear-gradient(135deg, #b8895f, #d9b98f);
+      box-shadow: 0 12px 34px rgba(var(--brand-rgb), 0.18);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .nav-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 44px rgba(var(--brand-rgb), 0.22);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.06fr) minmax(320px, 0.94fr);
+      align-items: center;
+      gap: 42px;
+      padding: 82px 0 56px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      width: fit-content;
+      padding: 9px 13px;
+      border: 1px solid rgba(var(--brand-rgb), 0.22);
+      border-radius: 999px;
+      color: #7a563d;
+      background: rgba(255, 250, 242, 0.72);
+      font-size: 14px;
+      font-weight: 800;
+      box-shadow: inset 0 1px 0 rgba(138, 103, 73, 0.12);
+    }
+
+    .pulse-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #b8895f, #d9b98f);
+      box-shadow: 0 0 0 7px rgba(var(--brand-rgb), 0.11);
+    }
+
+    h1 {
+      margin: 22px 0 18px;
+      max-width: 780px;
+      font-size: clamp(44px, 8vw, 88px);
+      line-height: 0.96;
+      letter-spacing: -0.075em;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #3f3028 8%, #9a6d49 45%, #d0a77a 82%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-copy {
+      max-width: 650px;
+      margin: 0 0 28px;
+      color: var(--soft);
+      font-size: clamp(17px, 2.1vw, 21px);
+      line-height: 1.8;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 13px;
+      margin-top: 28px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 50px;
+      padding: 0 19px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-weight: 900;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn.primary {
+      color: #3f3028;
+      background: linear-gradient(135deg, #b8895f, #d9b98f 58%, #fff0d8);
+      border-color: rgba(138, 103, 73, 0.28);
+      box-shadow: 0 18px 52px rgba(var(--brand-rgb), 0.18);
+    }
+
+    .btn.ghost {
+      color: var(--text);
+      background: rgba(255, 250, 242, 0.74);
+    }
+
+    .btn.ghost:hover {
+      background: rgba(255, 250, 242, 0.88);
+      border-color: rgba(138, 103, 73, 0.28);
+    }
+
+    .mini-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .mini-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 11px;
+      border: 1px solid rgba(138, 103, 73, 0.14);
+      border-radius: 999px;
+      background: rgba(255, 250, 242, 0.72);
+    }
+
+    .showcase {
+      position: relative;
+      min-height: 540px;
+    }
+
+    .phone-card {
+      position: relative;
+      max-width: 430px;
+      margin-left: auto;
+      padding: 18px;
+      border: 1px solid rgba(138, 103, 73, 0.2);
+      border-radius: 38px;
+      background:
+        linear-gradient(145deg, rgba(255, 250, 242, 0.96), rgba(244, 224, 203, 0.58)),
+        rgba(255, 250, 242, 0.72);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px);
+      transform: rotate(2deg);
+    }
+
+    .phone-screen {
+      overflow: hidden;
+      border-radius: 27px;
+      background: rgba(255, 250, 242, 0.94);
+      border: 1px solid rgba(138, 103, 73, 0.14);
+    }
+
+    .screen-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 18px;
+      border-bottom: 1px solid rgba(138, 103, 73, 0.12);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .traffic {
+      display: flex;
+      gap: 6px;
+    }
+
+    .traffic span {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: rgba(138, 103, 73, 0.28);
+    }
+
+    .dashboard {
+      padding: 22px;
+    }
+
+    .dashboard-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .dashboard-title h2 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: -0.045em;
+      line-height: 1.08;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 7px 10px;
+      border: 1px solid rgba(var(--brand-rgb), 0.2);
+      border-radius: 999px;
+      color: #7a563d;
+      background: rgba(var(--brand-rgb), 0.12);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .amount-card {
+      padding: 18px;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 20% 0, rgba(var(--brand-2-rgb), 0.46), transparent 44%),
+        linear-gradient(135deg, rgba(255, 246, 234, 0.94), rgba(var(--brand-rgb), 0.13));
+      border: 1px solid rgba(138, 103, 73, 0.18);
+    }
+
+    .amount-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .amount {
+      margin-top: 6px;
+      font-size: 36px;
+      font-weight: 950;
+      letter-spacing: -0.05em;
+    }
+
+    .chart {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      align-items: end;
+      gap: 8px;
+      height: 132px;
+      margin: 20px 0 18px;
+      padding: 16px;
+      border-radius: 24px;
+      background: rgba(255, 250, 242, 0.66);
+      border: 1px solid rgba(138, 103, 73, 0.12);
+    }
+
+    .bar {
+      border-radius: 999px;
+      background: linear-gradient(to top, rgba(var(--brand-rgb), 0.95), rgba(var(--brand-2-rgb), 0.9), rgba(255, 246, 234, 0.95));
+      min-height: 24px;
+      box-shadow: 0 10px 24px rgba(var(--brand-rgb), 0.14);
+      animation: grow 1.2s ease both;
+      transform-origin: bottom;
+    }
+
+    .bar:nth-child(1) { height: 38%; animation-delay: 0.05s; }
+    .bar:nth-child(2) { height: 72%; animation-delay: 0.1s; }
+    .bar:nth-child(3) { height: 49%; animation-delay: 0.15s; }
+    .bar:nth-child(4) { height: 86%; animation-delay: 0.2s; }
+    .bar:nth-child(5) { height: 58%; animation-delay: 0.25s; }
+    .bar:nth-child(6) { height: 42%; animation-delay: 0.3s; }
+    .bar:nth-child(7) { height: 68%; animation-delay: 0.35s; }
+
+    @keyframes grow {
+      from { transform: scaleY(0.2); opacity: 0.2; }
+      to { transform: scaleY(1); opacity: 1; }
+    }
+
+    .split-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .split-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(255, 250, 242, 0.72);
+      border: 1px solid rgba(138, 103, 73, 0.12);
+    }
+
+    .person {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--soft);
+      font-weight: 800;
+    }
+
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 13px;
+      background: rgba(138, 103, 73, 0.14);
+    }
+
+    .money {
+      font-weight: 950;
+      color: #7a563d;
+    }
+
+    .float-card {
+      position: absolute;
+      left: 0;
+      bottom: 32px;
+      width: min(280px, 72%);
+      padding: 16px;
+      border: 1px solid rgba(138, 103, 73, 0.2);
+      border-radius: 24px;
+      background: rgba(138, 103, 73, 0.14);
+      box-shadow: 0 20px 60px rgba(91, 62, 38, 0.18);
+      backdrop-filter: blur(20px);
+      transform: rotate(-5deg);
+    }
+
+    .float-card strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 15px;
+    }
+
+    .float-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .section {
+      padding: 58px 0;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .section-kicker {
+      color: var(--brand);
+      font-size: 14px;
+      font-weight: 950;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .section h2 {
+      margin: 8px 0 0;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.02;
+      letter-spacing: -0.06em;
+    }
+
+    .section-desc {
+      max-width: 460px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.8;
+      font-weight: 650;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .app-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 280px;
+      padding: 22px;
+      border: 1px solid rgba(138, 103, 73, 0.16);
+      border-radius: var(--radius-lg);
+      background:
+        radial-gradient(circle at var(--x, 20%) var(--y, 20%), rgba(138, 103, 73, 0.2), transparent 26%),
+        linear-gradient(145deg, rgba(255, 252, 247, 0.78), rgba(255, 252, 247, 0.54));
+      box-shadow: 0 18px 54px rgba(91, 62, 38, 0.13);
+      backdrop-filter: blur(20px);
+      transition: transform 0.24s ease, border-color 0.24s ease, background 0.24s ease;
+    }
+
+    .app-card:hover {
+      transform: translateY(-7px);
+      border-color: rgba(var(--brand-rgb), 0.34);
+    }
+
+    .app-card.disabled {
+      opacity: 0.74;
+    }
+
+    .app-card.disabled:hover {
+      transform: translateY(-3px);
+      border-color: rgba(138, 103, 73, 0.18);
+    }
+
+    .card-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 34px;
+    }
+
+    .icon {
+      display: grid;
+      place-items: center;
+      width: 56px;
+      height: 56px;
+      border-radius: 20px;
+      font-size: 29px;
+      background:
+        linear-gradient(135deg, rgba(var(--brand-rgb), 0.14), rgba(var(--brand-2-rgb), 0.22)),
+        rgba(255, 250, 242, 0.9);
+      border: 1px solid rgba(138, 103, 73, 0.18);
+      box-shadow: inset 0 1px 0 rgba(138, 103, 73, 0.14);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255, 250, 242, 0.82);
+      border: 1px solid rgba(138, 103, 73, 0.14);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .status.ready {
+      color: #7a563d;
+      background: rgba(var(--brand-rgb), 0.1);
+      border-color: rgba(var(--brand-rgb), 0.24);
+    }
+
+    .app-card h3 {
+      margin: 0 0 10px;
+      font-size: 24px;
+      letter-spacing: -0.04em;
+    }
+
+    .app-card p {
+      min-height: 76px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.72;
+      font-weight: 620;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(138, 103, 73, 0.12);
+      color: var(--soft);
+      font-weight: 900;
+    }
+
+    .arrow {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      color: #3f3028;
+      background: linear-gradient(135deg, #b8895f, #d9b98f);
+      transition: transform 0.2s ease;
+    }
+
+    .app-card:hover .arrow {
+      transform: translateX(4px);
+    }
+
+    .disabled .arrow {
+      color: var(--muted);
+      background: rgba(255, 250, 242, 0.74);
+    }
+
+    .highlights {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .glass-panel {
+      border: 1px solid rgba(138, 103, 73, 0.16);
+      border-radius: var(--radius-xl);
+      background: rgba(255, 250, 242, 0.74);
+      box-shadow: 0 18px 60px rgba(91, 62, 38, 0.14);
+      backdrop-filter: blur(18px);
+    }
+
+    .launch-panel {
+      padding: 28px;
+      background:
+        radial-gradient(circle at 0 0, rgba(var(--brand-2-rgb), 0.35), transparent 42%),
+        radial-gradient(circle at 100% 100%, rgba(var(--brand-rgb), 0.18), transparent 38%),
+        rgba(255, 250, 242, 0.78);
+    }
+
+    .launch-panel h2 {
+      margin-bottom: 14px;
+    }
+
+    .launch-panel p {
+      color: var(--muted);
+      line-height: 1.8;
+      font-weight: 650;
+    }
+
+    .check-list {
+      display: grid;
+      gap: 12px;
+      margin: 22px 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .check-list li {
+      display: flex;
+      gap: 10px;
+      color: var(--soft);
+      line-height: 1.6;
+      font-weight: 720;
+    }
+
+    .check-list li::before {
+      content: "✓";
+      display: grid;
+      place-items: center;
+      flex: 0 0 24px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      color: #3f3028;
+      background: linear-gradient(135deg, #b8895f, #d9b98f);
+      font-weight: 950;
+    }
+
+    .steps {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 14px;
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255, 250, 242, 0.72);
+      border: 1px solid rgba(138, 103, 73, 0.12);
+    }
+
+    .step-number {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 18px;
+      color: #3f3028;
+      background: linear-gradient(135deg, #b8895f, #d9b98f);
+      font-weight: 950;
+      box-shadow: 0 14px 34px rgba(var(--brand-rgb), 0.13);
+    }
+
+    .step h3 {
+      margin: 0 0 6px;
+      letter-spacing: -0.025em;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-weight: 620;
+    }
+
+    .code-note {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 22px;
+      color: #5a402f;
+      background: rgba(255, 248, 239, 0.92);
+      border: 1px solid rgba(var(--brand-rgb), 0.16);
+      overflow-x: auto;
+    }
+
+    .code-note code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre;
+    }
+
+    .site-footer {
+      padding: 44px 0 54px;
+      color: var(--muted);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(138, 103, 73, 0.12);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .footer-links a {
+      padding: 9px 10px;
+      border-radius: 999px;
+      background: rgba(255, 250, 242, 0.66);
+      transition: 0.2s ease;
+    }
+
+    .footer-links a:hover {
+      color: var(--text);
+      background: rgba(255, 250, 242, 0.84);
+    }
+
+    .mouse-light {
+      position: fixed;
+      inset: auto;
+      left: var(--mx, 50%);
+      top: var(--my, 50%);
+      width: 420px;
+      height: 420px;
+      pointer-events: none;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(var(--brand-rgb), 0.14), transparent 62%);
+      transform: translate(-50%, -50%);
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    body:hover .mouse-light {
+      opacity: 1;
+    }
+
+
+
+    /* 奶茶白主題覆寫：保持整頁溫柔、明亮、統一 */
+    body {
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(var(--brand-rgb), 0.18), transparent 28rem),
+        radial-gradient(circle at 82% 10%, rgba(var(--brand-2-rgb), 0.22), transparent 30rem),
+        radial-gradient(circle at 70% 82%, rgba(231, 201, 165, 0.2), transparent 26rem),
+        linear-gradient(135deg, var(--bg), var(--bg-2) 56%, #ead8c4);
+    }
+
+    body::before {
+      background-image:
+        linear-gradient(rgba(138, 103, 73, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(138, 103, 73, 0.07) 1px, transparent 1px);
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.42), transparent 74%);
+    }
+
+    .aurora.one { background: #dfbd96; }
+    .aurora.two { background: #f0d9bb; }
+    .aurora.three { background: #d0a77a; }
+
+    .site-header {
+      background: rgba(255, 248, 238, 0.82);
+      border-bottom: 1px solid rgba(138, 103, 73, 0.14);
+    }
+
+    .brand-mark,
+    .icon {
+      background:
+        linear-gradient(135deg, rgba(var(--brand-rgb), 0.22), rgba(var(--brand-2-rgb), 0.24)),
+        rgba(255, 250, 242, 0.8);
+      border-color: var(--line);
+      box-shadow: 0 14px 34px rgba(var(--brand-rgb), 0.13);
+    }
+
+    .nav-links a:hover,
+    .btn.ghost,
+    .mini-pill,
+    .status,
+    .disabled .arrow,
+    .footer-links a {
+      background: rgba(255, 250, 242, 0.68);
+      border-color: var(--line);
+    }
+
+    .nav-links a:hover,
+    .btn.ghost:hover,
+    .footer-links a:hover {
+      background: rgba(255, 243, 226, 0.92);
+    }
+
+    .nav-cta,
+    .btn.primary,
+    .arrow,
+    .step-number,
+    .check-list li::before {
+      color: #3f3028;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2) 66%, var(--brand-3));
+      border-color: rgba(138, 103, 73, 0.24);
+      box-shadow: 0 16px 44px rgba(var(--brand-rgb), 0.22);
+    }
+
+    .eyebrow,
+    .tag,
+    .status.ready {
+      color: #7a563d;
+      background: rgba(var(--brand-rgb), 0.12);
+      border-color: rgba(var(--brand-rgb), 0.28);
+      box-shadow: inset 0 1px 0 rgba(255, 250, 242, 0.75);
+    }
+
+    .pulse-dot {
+      background: var(--success);
+      box-shadow: 0 0 0 7px rgba(var(--brand-rgb), 0.14);
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #3f3028 8%, #9a6d49 48%, #d0a77a 84%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .phone-card,
+    .app-card,
+    .glass-panel,
+    .float-card {
+      border-color: rgba(138, 103, 73, 0.18);
+      background:
+        radial-gradient(circle at var(--x, 20%) var(--y, 20%), rgba(255, 240, 216, 0.72), transparent 28%),
+        linear-gradient(145deg, rgba(255, 250, 242, 0.92), rgba(244, 229, 212, 0.56));
+      box-shadow: var(--shadow);
+    }
+
+    .phone-screen,
+    .chart,
+    .split-item,
+    .step {
+      background: rgba(255, 250, 242, 0.76);
+      border-color: rgba(138, 103, 73, 0.14);
+    }
+
+    .screen-top,
+    .card-footer,
+    .footer-inner {
+      border-color: rgba(138, 103, 73, 0.13);
+    }
+
+    .traffic span,
+    .avatar {
+      background: rgba(184, 137, 95, 0.14);
+    }
+
+    .amount-card,
+    .launch-panel {
+      background:
+        radial-gradient(circle at 18% 0, rgba(var(--brand-rgb), 0.18), transparent 46%),
+        radial-gradient(circle at 100% 100%, rgba(var(--brand-2-rgb), 0.22), transparent 40%),
+        rgba(255, 250, 242, 0.76);
+      border-color: rgba(138, 103, 73, 0.16);
+    }
+
+    .bar {
+      background: linear-gradient(to top, rgba(var(--brand-rgb), 0.96), rgba(var(--brand-2-rgb), 0.96), rgba(255, 240, 216, 0.95));
+      box-shadow: 0 10px 22px rgba(var(--brand-rgb), 0.18);
+    }
+
+    .money,
+    .section-kicker {
+      color: #8a6040;
+    }
+
+    .app-card:hover {
+      border-color: rgba(var(--brand-rgb), 0.34);
+    }
+
+    .app-card.disabled:hover {
+      border-color: rgba(138, 103, 73, 0.18);
+    }
+
+    .code-note {
+      color: #5a402f;
+      background: rgba(244, 229, 212, 0.92);
+      border-color: rgba(var(--brand-rgb), 0.2);
+    }
+
+    .mouse-light {
+      background: radial-gradient(circle, rgba(var(--brand-rgb), 0.16), transparent 62%);
+    }
+
+    @media (max-width: 980px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding-top: 58px;
+      }
+
+      .showcase {
+        min-height: auto;
+      }
+
+      .phone-card {
+        margin: 0 auto;
+        transform: rotate(0);
+      }
+
+      .float-card {
+        left: 16px;
+        bottom: -16px;
+      }
+
+      .feature-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .highlights {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .container {
+        width: min(calc(100% - 28px), var(--max-width));
+      }
+
+      .nav {
+        min-height: 68px;
+      }
+
+      .nav-links a:not(.nav-cta) {
+        display: none;
+      }
+
+      .nav-cta {
+        padding: 9px 12px;
+      }
+
+      .hero {
+        padding-top: 42px;
+      }
+
+      h1 {
+        letter-spacing: -0.06em;
+      }
+
+      .section {
+        padding: 42px 0;
+      }
+
+      .section-heading {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .app-card {
+        min-height: auto;
+      }
+
+      .app-card p {
+        min-height: auto;
+      }
+
+      .footer-inner {
+        align-items: start;
+        flex-direction: column;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation: none !important;
+        transition: none !important;
+      }
+
+      .mouse-light {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div class="aurora one"></div>
+    <div class="aurora two"></div>
+    <div class="aurora three"></div>
+    <div class="mouse-light" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <nav class="container nav" aria-label="主選單">
+        <a class="brand" href="./index.html" aria-label="TripSplit 首頁">
+          <span class="brand-mark">旅</span>
+          <span>
+            TripSplit
+            <small>Travel Tools Hub</small>
+          </span>
+        </a>
+
+        <div class="nav-links">
+          <a href="#features">功能入口</a>
+          <a href="#expand">擴充方式</a>
+          <a class="nav-cta" href="./TripSplit/TripSplit.html">開始記帳 <span aria-hidden="true">→</span></a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="container hero">
+        <div>
+          <div class="eyebrow">
+            <span class="pulse-dot" aria-hidden="true"></span>
+            旅行記帳入口已就緒
+          </div>
+
+          <h1>
+            <span class="gradient-text">把每趟旅行</span><br />
+            收進一個漂亮首頁。
+          </h1>
+
+          <p class="hero-copy">
+            這裡是 TripSplit 的功能入口。先從旅遊記帳與分帳開始，之後你可以把行程規劃、行李清單、匯率工具、旅費報表等功能逐步加進來。
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn primary" href="./TripSplit/TripSplit.html">
+              開啟旅遊記帳
+              <span aria-hidden="true">→</span>
+            </a>
+            <a class="btn ghost" href="#features">看看全部功能</a>
+          </div>
+
+          <div class="mini-row" aria-label="首頁特色">
+            <span class="mini-pill">✨ 精美導轉首頁</span>
+            <span class="mini-pill">📱 手機版友善</span>
+            <span class="mini-pill">🧩 未來功能可擴充</span>
+          </div>
+        </div>
+
+        <div class="showcase" aria-label="TripSplit 預覽">
+          <div class="phone-card">
+            <div class="phone-screen">
+              <div class="screen-top">
+                <div class="traffic" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </div>
+                <span>TripSplit Preview</span>
+              </div>
+
+              <div class="dashboard">
+                <div class="dashboard-title">
+                  <h2>東京五日遊<br />花費管理</h2>
+                  <span class="tag">Live</span>
+                </div>
+
+                <div class="amount-card">
+                  <div class="amount-label">目前旅費總覽</div>
+                  <div class="amount">NT$ 24,680</div>
+                </div>
+
+                <div class="chart" aria-label="支出圖表裝飾">
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </div>
+
+                <div class="split-list">
+                  <div class="split-item">
+                    <span class="person"><span class="avatar">🍜</span>餐飲</span>
+                    <span class="money">NT$ 8,120</span>
+                  </div>
+                  <div class="split-item">
+                    <span class="person"><span class="avatar">🚃</span>交通</span>
+                    <span class="money">NT$ 5,460</span>
+                  </div>
+                  <div class="split-item">
+                    <span class="person"><span class="avatar">🏨</span>住宿</span>
+                    <span class="money">NT$ 11,100</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="float-card">
+            <strong>一鍵導向現有功能</strong>
+            <p>首頁按鈕會直接連到同資料夾的 <code>TripSplit.html</code>，放上 GitHub Pages 後即可使用。</p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="features" class="container section">
+        <div class="section-heading">
+          <div>
+            <div class="section-kicker">Feature Hub</div>
+            <h2>你的旅行工具箱</h2>
+          </div>
+          <p class="section-desc">
+            目前已啟用旅遊記帳。未來新增功能時，只要在下方卡片資料新增一筆，就能變成首頁入口。
+          </p>
+        </div>
+
+        <div class="feature-grid" id="featureGrid" aria-live="polite"></div>
+
+        <noscript>
+          <p>
+            你的瀏覽器未啟用 JavaScript。你仍然可以直接開啟
+            <a href="./TripSplit/TripSplit.html">TripSplit 旅遊記帳</a>。
+          </p>
+        </noscript>
+      </section>
+
+      <section id="expand" class="container section">
+        <div class="highlights">
+          <div class="glass-panel launch-panel">
+            <div class="section-kicker">Ready to Launch</div>
+            <h2>直接放到專案根目錄。</h2>
+            <p>
+              請把這份檔案命名為 <strong>index.html</strong>，並放在 <strong>TripSplit.html</strong> 同一層。使用者進入 GitHub Pages 資料夾網址時，就會先看到這個首頁。
+            </p>
+            <ul class="check-list">
+              <li>主要按鈕會導向 <code>./TripSplit.html</code></li>
+              <li>整頁不依賴外部套件或圖片</li>
+              <li>功能卡片可用資料陣列快速擴充</li>
+            </ul>
+            <a class="btn primary" href="./TripSplit/TripSplit.html">前往現有記帳頁面</a>
+          </div>
+
+          <div class="glass-panel steps">
+            <div class="step">
+              <div class="step-number">01</div>
+              <div>
+                <h3>新增功能頁</h3>
+                <p>例如建立 <code>Itinerary.html</code>、<code>Packing.html</code> 或 <code>Report.html</code>。</p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">02</div>
+              <div>
+                <h3>加入首頁卡片</h3>
+                <p>在檔案底部的 <code>FEATURES</code> 陣列新增一筆資料，填入標題、描述、圖示與連結。</p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-number">03</div>
+              <div>
+                <h3>上傳 GitHub Pages</h3>
+                <p>Commit 後首頁會自動變成漂亮入口，使用者再從首頁導向不同功能。</p>
+              </div>
+            </div>
+
+            <div class="code-note" aria-label="擴充範例">
+              <code>{
+  title: "行李清單",
+  description: "出國前整理必帶物品，依天數與目的地分類。",
+  icon: "🎒",
+  href: "./Packing.html",
+  status: "即將推出"
+}</code>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div>© <span id="year"></span> TripSplit. Made for better trips.</div>
+        <div class="footer-links">
+          <a href="./TripSplit/TripSplit.html">旅遊記帳</a>
+          <a href="#features">功能入口</a>
+          <a href="#expand">擴充方式</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const FEATURES = [
+      {
+        title: "旅遊記帳分帳",
+        description: "新增旅遊、旅伴、分類、付款方式與支出紀錄，適合多人旅行一起管理花費。",
+        icon: "💳",
+        href: "./TripSplit/TripSplit.html",
+        status: "已啟用",
+        ready: true,
+        action: "開始使用"
+      },
+      {
+        title: "行程規劃",
+        description: "未來可放每日行程、景點排序、交通時間與備註，讓旅行安排更清楚。",
+        icon: "🗺️",
+        href: "#expand",
+        status: "規劃中",
+        ready: false,
+        action: "Coming Soon"
+      },
+      {
+        title: "行李清單",
+        description: "依照天數、天氣與目的地整理必帶物品，出發前快速勾選不漏帶。",
+        icon: "🎒",
+        href: "#expand",
+        status: "規劃中",
+        ready: false,
+        action: "Coming Soon"
+      },
+      {
+        title: "匯率小工具",
+        description: "未來可集中管理常用幣別、換算台幣與快速查詢旅途中常見金額。",
+        icon: "💱",
+        href: "#expand",
+        status: "可擴充",
+        ready: false,
+        action: "Coming Soon"
+      },
+      {
+        title: "旅費報表",
+        description: "把支出資料變成圖表與摘要，快速看出哪一類花最多、誰該補誰。",
+        icon: "📊",
+        href: "#expand",
+        status: "可擴充",
+        ready: false,
+        action: "Coming Soon"
+      },
+      {
+        title: "旅遊相簿",
+        description: "之後可把收據、照片與回憶整理在同一個旅行專案裡。",
+        icon: "📸",
+        href: "#expand",
+        status: "想法池",
+        ready: false,
+        action: "Coming Soon"
+      }
+    ];
+
+    const featureGrid = document.querySelector("#featureGrid");
+
+    function createFeatureCard(feature) {
+      const card = document.createElement("a");
+      card.className = `app-card ${feature.ready ? "" : "disabled"}`;
+      card.href = feature.href;
+      card.setAttribute("aria-label", `${feature.title}：${feature.status}`);
+
+      if (!feature.ready) {
+        card.addEventListener("click", (event) => {
+          event.preventDefault();
+          document.querySelector("#expand")?.scrollIntoView({ behavior: "smooth" });
+        });
+      }
+
+      card.innerHTML = `
+        <div class="card-topline">
+          <span class="icon" aria-hidden="true">${feature.icon}</span>
+          <span class="status ${feature.ready ? "ready" : ""}">${feature.status}</span>
+        </div>
+        <h3>${feature.title}</h3>
+        <p>${feature.description}</p>
+        <div class="card-footer">
+          <span>${feature.action}</span>
+          <span class="arrow" aria-hidden="true">→</span>
+        </div>
+      `;
+
+      return card;
+    }
+
+    FEATURES.forEach((feature) => {
+      featureGrid.appendChild(createFeatureCard(feature));
+    });
+
+    document.querySelector("#year").textContent = new Date().getFullYear();
+
+    document.addEventListener("pointermove", (event) => {
+      document.documentElement.style.setProperty("--mx", `${event.clientX}px`);
+      document.documentElement.style.setProperty("--my", `${event.clientY}px`);
+    });
+
+    document.querySelectorAll(".app-card").forEach((card) => {
+      card.addEventListener("pointermove", (event) => {
+        const rect = card.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 100;
+        const y = ((event.clientY - rect.top) / rect.height) * 100;
+        card.style.setProperty("--x", `${x}%`);
+        card.style.setProperty("--y", `${y}%`);
+      });
+    });
+  </script>
+</body>
+</html>
