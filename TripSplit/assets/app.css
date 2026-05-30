@@ -1536,14 +1536,16 @@ input:focus, select:focus, textarea:focus {
 
     .mobile-tabbar a {
         flex: 1;
+        min-width: 0;
         display: grid;
         place-items: center;
         gap: 2px;
-        padding: 8px 4px;
-        border-radius: 18px;
+        padding: 8px 3px;
+        border-radius: 16px;
         color: #6b5742;
-        font-size: .78rem;
+        font-size: .74rem;
         font-weight: 950;
+        line-height: 1.15;
     }
 
         .mobile-tabbar a.primary {
@@ -1651,6 +1653,20 @@ input:focus, select:focus, textarea:focus {
         padding: 8px 6px;
         border-radius: 12px;
         font-size: clamp(.78rem, 3.45vw, .9rem);
+    }
+
+    .mobile-tabbar {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        padding: 6px;
+        border-radius: 20px;
+    }
+
+    .mobile-tabbar a {
+        padding: 7px 2px;
+        border-radius: 14px;
+        font-size: .7rem;
     }
 
     .card-header, .card-body, .card-footer {
