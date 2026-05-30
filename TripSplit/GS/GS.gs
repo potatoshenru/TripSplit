@@ -156,19 +156,69 @@ function setupSheets() {
     ]
   };
 
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const results = [];
+
   Object.keys(schemas).forEach((name) => {
-    const target = sheet(name);
-    target.clear();
-    target.getRange(1, 1, 1, schemas[name].length).setValues([schemas[name]]);
-    target.setFrozenRows(1);
-    target.autoResizeColumns(1, schemas[name].length);
+    const headers = schemas[name];
+
+    let target = ss.getSheetByName(name);
+    let created = false;
+
+    // 沒有這個 sheet 才新增
+    if (!target) {
+      target = ss.insertSheet(name);
+      created = true;
+    }
+
+    // 確保欄位數足夠
+    if (target.getMaxColumns() < headers.length) {
+      target.insertColumnsAfter(
+        target.getMaxColumns(),
+        headers.length - target.getMaxColumns()
+      );
+    }
+
+    // 檢查第 1 列是否已有 header
+    const headerRange = target.getRange(1, 1, 1, headers.length);
+    const currentHeaders = headerRange.getValues()[0];
+
+    let changed = false;
+
+    headers.forEach((header, index) => {
+      const currentValue = currentHeaders[index];
+
+      // 這個欄位位置是空的，才補上 header
+      if (!currentValue) {
+        currentHeaders[index] = header;
+        changed = true;
+      }
+    });
+
+    // 只有有缺 header 時才寫入
+    if (changed || created) {
+      headerRange.setValues([currentHeaders]);
+    }
+
+    // 第 1 列還沒凍結才凍結
+    if (target.getFrozenRows() < 1) {
+      target.setFrozenRows(1);
+    }
+
+    target.autoResizeColumns(1, headers.length);
+
+    results.push({
+      sheet: name,
+      created,
+      headerUpdated: changed || created
+    });
   });
 
   seedDefaultData();
 
   return {
-    message: 'Sheets created successfully.',
-    sheets: Object.keys(schemas)
+    message: 'Sheets checked successfully.',
+    sheets: results
   };
 }
 
