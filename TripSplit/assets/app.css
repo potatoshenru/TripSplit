@@ -387,6 +387,26 @@ h1 {
     gap: 14px;
 }
 
+.payer-split-grid {
+    grid-template-columns: 1fr;
+}
+
+    .payer-split-grid .input-with-action {
+        display: flex;
+        align-items: stretch;
+    }
+
+        .payer-split-grid .input-with-action .icon-select,
+        .payer-split-grid .input-with-action select {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .payer-split-grid .input-with-action .btn {
+            flex: 0 0 68px;
+            padding-inline: 12px;
+        }
+
 .stack-form {
     display: grid;
     gap: 12px;
@@ -776,6 +796,7 @@ input:focus, select:focus, textarea:focus {
         border-radius: 17px;
         background: var(--surface-strong);
         font-weight: 950;
+        line-height: 1.2;
         text-align: center;
         color: #634e39;
     }
@@ -1593,7 +1614,7 @@ input:focus, select:focus, textarea:focus {
         padding: 22px;
     }
 
-    .form-grid, .form-grid-3, .balance-grid, .side-stack .balance-grid, .split-type, .settings-nav {
+    .form-grid-3, .balance-grid, .side-stack .balance-grid, .settings-nav {
         grid-template-columns: 1fr;
     }
 
@@ -1631,6 +1652,10 @@ input:focus, select:focus, textarea:focus {
 
     .input-with-action {
         grid-template-columns: 1fr;
+    }
+
+    .payer-split-grid .input-with-action {
+        display: flex;
     }
 
     .expense-item {
@@ -1691,11 +1716,11 @@ input:focus, select:focus, textarea:focus {
         border-radius: 20px;
     }
 
-    .mobile-tabbar a {
-        padding: 7px 2px;
-        border-radius: 14px;
-        font-size: .7rem;
-    }
+        .mobile-tabbar a {
+            padding: 7px 2px;
+            border-radius: 14px;
+            font-size: .7rem;
+        }
 
     .card-header, .card-body, .card-footer {
         padding-left: 15px;

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TripSplit｜快速記帳</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='48'%3E%E6%97%85%3C/text%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="./assets/app.css?v=2" />
+    <link rel="stylesheet" href="./assets/app.css?v=4" />
 </head>
 <body data-page="home">
     <header class="app-header">
@@ -86,10 +86,10 @@
                                 </div>
 
                                 <div class="section-divider">2. 誰付、誰分</div>
-                                <div class="form-grid">
-                                    <div class="field"><label for="paid-by">付款人</label><select id="paid-by" required></select></div>
-                                    <div class="field"><label for="category-id">分類</label><div class="input-with-action"><select id="category-id" required></select><a class="btn btn-soft" href="./settings.html#categories">管理</a></div></div>
-                                    <div class="field"><label for="payment-method-id">付款方式</label><div class="input-with-action"><select id="payment-method-id" required></select><a class="btn btn-soft" href="./settings.html#payment-methods">管理</a></div></div>
+                                <div class="form-grid payer-split-grid">
+                                    <div class="field full"><label for="paid-by">付款人</label><div class="input-with-action"><select id="paid-by" required></select><a class="btn btn-soft" href="./settings.html#members">管理</a></div></div>
+                                    <div class="field full"><label for="category-id">分類</label><div class="input-with-action"><select id="category-id" required></select><a class="btn btn-soft" href="./settings.html#categories">管理</a></div></div>
+                                    <div class="field full"><label for="payment-method-id">付款方式</label><div class="input-with-action"><select id="payment-method-id" required></select><a class="btn btn-soft" href="./settings.html#payment-methods">管理</a></div></div>
                                     <div class="inline-help">找不到分類、付款方式或旅伴時，請到設定頁新增；首頁保持專注記帳。</div>
                                 </div>
 
