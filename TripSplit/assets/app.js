@@ -1025,6 +1025,7 @@ async function getReceiptPayloads() {
 }
 
 let expenseSearchTerm = '';
+let pendingExpenseResetCurrency = '';
 
 function safeSetText(selector, value) {
     const node = $(selector);
@@ -1261,18 +1262,32 @@ function syncAllIconSelects() {
     document.querySelectorAll('select').forEach(syncIconSelect);
 }
 
+function getPreferredExpenseCurrency(fallback = 'JPY') {
+    const lastExpense = expenses.length ? expenses[expenses.length - 1] : null;
+    return String(lastExpense?.currency || localStorage.getItem('tripsplit_last_currency') || fallback).toUpperCase();
+}
+
+function applyPreferredExpenseCurrency(preferredCurrency = getPreferredExpenseCurrency()) {
+    const currencySelect = $('#expense-currency');
+    if (!currencySelect) return '';
+
+    const currency = Array.from(currencySelect.options).some(option => option.value === preferredCurrency)
+        ? preferredCurrency
+        : 'JPY';
+    currencySelect.value = currency;
+    localStorage.setItem('tripsplit_last_currency', currency);
+    updateExchangePreview();
+    syncIconSelect(currencySelect);
+    return currency;
+}
+
 function renderSelects() {
     const categorySelect = $('#category-id');
     const paymentSelect = $('#payment-method-id');
     if (categorySelect) categorySelect.innerHTML = '<option value="">請選擇分類</option>' + categories.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
     if (paymentSelect) paymentSelect.innerHTML = '<option value="">請選擇付款方式</option>' + paymentMethods.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
 
-    const currencySelect = $('#expense-currency');
-    if (currencySelect) {
-        const lastCurrency = localStorage.getItem('tripsplit_last_currency') || 'JPY';
-        currencySelect.value = lastCurrency;
-        updateExchangePreview();
-    }
+    applyPreferredExpenseCurrency();
     syncAllIconSelects();
 }
 
@@ -1555,7 +1570,10 @@ function bindExpenseForm() {
     if (!expenseForm) return;
     expenseForm.addEventListener('reset', () => {
         window.setTimeout(() => {
+            const resetCurrency = pendingExpenseResetCurrency;
+            pendingExpenseResetCurrency = '';
             clearReceiptFiles();
+            applyPreferredExpenseCurrency(resetCurrency || getPreferredExpenseCurrency());
             updateExchangePreview();
             renderSplitConfig();
             syncAllIconSelects();
@@ -1599,7 +1617,9 @@ function bindExpenseForm() {
         }, receiptPayloads.length ? 4500 : 1000);
 
         localStorage.setItem('tripsplit_last_currency', currency);
+        pendingExpenseResetCurrency = currency;
         expenseForm.reset();
+        applyPreferredExpenseCurrency(currency);
         clearReceiptFiles();
         if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
         updateExchangePreview();
