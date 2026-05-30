@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TripSplit｜設定管理</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='48'%3E%E6%97%85%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./assets/app.css?v=10" />
+</head>
+<body data-page="settings">
+  <header class="app-header">
+    <div class="container nav">
+      <a href="./TripSplit.html" class="brand" aria-label="TripSplit 首頁"><span class="brand-icon">旅</span><span>TripSplit</span></a>
+      <nav class="nav-links" aria-label="主要導覽">
+        <a href="./TripSplit.html">快速記帳</a>
+        <a href="#trips" class="active">設定管理</a>
+        <a href="#members">成員</a>
+        <a href="#categories">分類</a>
+        <a href="#payment-methods">付款方式</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="container">
+      <section class="hero-panel" aria-label="設定頁說明">
+        <div class="hero-copy">
+          <div class="eyebrow">低頻管理集中處理</div>
+          <h1>設定管理</h1>
+          <p class="lead">旅遊、成員、分類、付款方式、匯率與封存統一放在這裡。首頁保持乾淨，旅行中只要專心新增支出和看結算。</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="./TripSplit.html#expense-form">回首頁記帳</a>
+            <a class="btn btn-soft" href="#members">管理成員</a>
+          </div>
+        </div>
+
+        <aside class="quick-switch" aria-label="目前旅遊">
+          <div class="quick-switch-head">
+            <div><strong>目前管理的旅遊</strong><span>切換後，下方成員、分類與付款方式都會跟著更新。</span></div>
+          </div>
+          <form class="stack-form" id="trip-switch-form">
+            <div class="field"><label for="trip-select">目前旅遊</label><select id="trip-select"></select></div>
+            <button class="btn btn-primary btn-block" type="submit">切換管理帳本</button>
+          </form>
+          <div class="notice" id="sync-status"><span class="status-dot"></span>正在準備旅遊資料...</div>
+        </aside>
+      </section>
+
+      <div class="settings-layout">
+        <aside class="settings-nav" aria-label="設定分類">
+          <a href="#trips">旅遊 <span>›</span></a>
+          <a href="#members">成員 <span>›</span></a>
+          <a href="#categories">分類 <span>›</span></a>
+          <a href="#payment-methods">付款方式 <span>›</span></a>
+          <a href="#rates">匯率 <span>›</span></a>
+          <a href="#archived-trips">封存 <span>›</span></a>
+        </aside>
+
+        <section class="settings-stack">
+          <section class="card" id="trips">
+            <div class="card-header"><div class="card-title"><h2>旅遊管理</h2><p>新增旅遊、切換帳本，或把不常用的旅遊封存。</p></div></div>
+            <div class="card-body">
+              <div class="form-grid">
+                <form class="stack-form" id="trip-create-form">
+                  <div class="field"><label for="new-trip-name">新增旅遊名稱</label><input id="new-trip-name" type="text" placeholder="例如：大阪七日遊" autocomplete="off" /></div>
+                  <button class="btn btn-primary btn-block" type="submit">＋ 新增旅遊</button>
+                </form>
+                <div class="stack-form">
+                  <div class="field"><label>封存目前旅遊</label><button id="archive-trip-btn" class="btn btn-danger btn-block" type="button">📦 封存目前旅遊</button></div>
+                  <p class="backend-note">封存後不會出現在主要旅遊下拉選單；可在「封存」區解除封存。</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" id="members">
+            <div class="card-header"><div class="card-title"><h2>分帳對象</h2><p>每個旅遊有自己的旅伴名單。</p></div></div>
+            <div class="card-body">
+              <form class="stack-form" id="member-form">
+                <div class="form-grid">
+                  <div class="field"><label for="member-name">新增成員名稱</label><input id="member-name" type="text" placeholder="例如：Dustin" autocomplete="off" /></div>
+                  <div class="field"><label>&nbsp;</label><button class="btn btn-primary btn-block" type="submit">＋ 新增分帳對象</button></div>
+                </div>
+              </form>
+              <div class="item-list" id="member-list" style="margin-top:14px;"></div>
+            </div>
+          </section>
+
+          <section class="card" id="categories">
+            <div class="card-header"><div class="card-title"><h2>分類管理</h2><p>可自行新增早餐、咖啡、門票等分類。</p></div></div>
+            <div class="card-body">
+              <form class="stack-form" id="category-form">
+                <div class="form-grid-3">
+                  <div class="field"><label for="new-category-name">分類名稱</label><input id="new-category-name" type="text" placeholder="例如：早餐" autocomplete="off" /></div>
+                  <div class="field"><label for="new-category-icon">分類圖示</label><input id="new-category-icon" type="text" placeholder="例如：🍳" maxlength="4" /></div>
+                  <div class="field"><label>&nbsp;</label><button class="btn btn-primary btn-block" type="submit">＋ 新增分類</button></div>
+                </div>
+              </form>
+              <div class="item-list" id="category-list" style="margin-top:14px;"></div>
+            </div>
+          </section>
+
+          <section class="card" id="payment-methods">
+            <div class="card-header"><div class="card-title"><h2>付款方式管理</h2><p>可自行新增現金、信用卡、LINE Pay、Suica。</p></div></div>
+            <div class="card-body">
+              <form class="stack-form" id="payment-form">
+                <div class="form-grid-3">
+                  <div class="field"><label for="new-payment-name">付款方式</label><input id="new-payment-name" type="text" placeholder="例如：Suica" autocomplete="off" /></div>
+                  <div class="field"><label for="new-payment-icon">圖示</label><input id="new-payment-icon" type="text" placeholder="例如：💳" maxlength="4" /></div>
+                  <div class="field"><label>&nbsp;</label><button class="btn btn-primary btn-block" type="submit">＋ 新增付款方式</button></div>
+                </div>
+              </form>
+              <div class="item-list" id="payment-list" style="margin-top:14px;"></div>
+            </div>
+          </section>
+
+          <section class="card" id="rates">
+            <div class="card-header"><div class="card-title"><h2>匯率</h2><p>目前由後端 / 資料表統一管理，首頁新增支出時會自動套用。</p></div></div>
+            <div class="card-body"><div class="item-list" id="rate-list"></div></div>
+          </section>
+
+          <section class="card" id="archived-trips">
+            <div class="card-header"><div class="card-title"><h2>已封存旅遊</h2><p>查看歷史旅遊，必要時可解除封存。</p></div></div>
+            <div class="card-body"><div class="item-list" id="archived-trips-list"></div></div>
+          </section>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <nav class="mobile-tabbar" aria-label="手機快速導覽">
+    <a href="./TripSplit.html">🏠<span>首頁</span></a>
+    <a href="#members">👥<span>成員</span></a>
+    <a href="#categories">🏷<span>分類</span></a>
+    <a href="#trips" class="primary">⚙<span>設定</span></a>
+  </nav>
+
+  <footer class="footer"><div class="container">© 2026 TripSplit. Travel expense sharing.</div></footer>
+  <script src="./assets/app.js?v=10"></script>
+</body>
+</html>

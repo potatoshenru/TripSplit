@@ -3,234 +3,173 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TripSplit｜旅遊記帳分帳</title>
+  <title>TripSplit｜快速記帳</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='48'%3E%E6%97%85%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="./css/base.css?v=3" />
-  <link rel="stylesheet" href="./css/forms.css?v=3" />
-  <link rel="stylesheet" href="./css/hero.css?v=3" />
+  <link rel="stylesheet" href="./assets/app.css?v=11" />
 </head>
-<body>
+<body data-page="home">
   <header class="app-header">
     <div class="container nav">
-      <a href="#" class="brand" aria-label="TripSplit 首頁"><span class="brand-icon">旅</span><span>TripSplit</span></a>
+      <a href="./TripSplit.html" class="brand" aria-label="TripSplit 首頁"><span class="brand-icon">旅</span><span>TripSplit</span></a>
       <nav class="nav-links" aria-label="主要導覽">
-        <a href="#trip-settings">旅遊設定</a>
-        <a href="#members">分帳對象</a>
-        <a href="#categories">分類</a>
-        <a href="#payment-methods">付款方式</a>
-        <a href="#expense-form">新增支出</a>
+        <a href="./TripSplit.html" class="active">快速記帳</a>
+        <a href="#expenses">支出紀錄</a>
+        <a href="#balances">收支平衡</a>
+        <a href="./settings.html">設定管理</a>
       </nav>
     </div>
   </header>
 
-  <main>
-    <section class="hero">
-      <div class="container">
-        <div class="hero-card">
-          <div>
-            <div class="eyebrow">旅遊切換・自訂分類・自訂付款方式・匯率自動換算</div>
-            <h1 id="hero-title">東京五日遊｜旅行花費一頁管理。</h1>
-            <p>可新增不同旅遊名稱，並從「旅遊設定」切換旅遊。切換後會用目前旅遊的 trip_id 讀取對應的成員、分類、付款方式與支出紀錄。</p>
-            <div class="actions">
-              <a class="btn btn-primary" href="#expense-form">新增一筆支出</a>
-              <a class="btn btn-soft" href="#trip-settings">切換旅遊</a>
-            </div>
+  <main class="page-shell">
+    <div class="container">
+      <section class="hero-panel" aria-label="旅遊帳本總覽">
+        <div class="hero-copy">
+          <div class="eyebrow">旅行中使用・快速新增・立即結算</div>
+          <h1 id="hero-title">東京五日遊｜快速記一筆花費。</h1>
+          <p class="lead">首頁只放旅行中最常用的功能：選旅遊、新增支出、查紀錄、看結算。成員、分類、付款方式與封存都移到設定頁，降低記帳時的干擾。</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#expense-form">＋ 新增支出</a>
+            <a class="btn btn-soft" href="./settings.html">⚙ 管理設定</a>
           </div>
-
-          <aside class="trip-summary" aria-label="旅遊總覽">
-            <h2 id="summary-trip-title">東京五日遊｜目前統計</h2>
-            <div class="summary-grid">
-              <div class="summary-item"><span>總支出</span><strong id="summary-total">NT$ 0</strong></div>
-              <div class="summary-item"><span>旅伴人數</span><strong id="summary-member-count">0 人</strong></div>
-              <div class="summary-item"><span>支出筆數</span><strong id="summary-count">0 筆</strong></div>
-              <div class="summary-item"><span>目前旅遊 ID</span><strong id="summary-trip-id">trip_default</strong></div>
-            </div>
-          </aside>
         </div>
-      </div>
-    </section>
 
-    <div class="container main-layout">
-      <aside class="sidebar">
-        <section class="card" id="trip-settings">
-          <div class="card-header">
-            <div class="card-title">
-              <h2>旅遊設定</h2>
-              <p>新增旅遊名稱，或切換目前正在記帳的旅遊。</p>
+        <aside class="quick-switch" aria-label="切換旅遊">
+          <div class="quick-switch-head">
+            <div>
+              <strong id="summary-trip-title">東京五日遊｜目前統計</strong>
+              <span>切換旅遊後，會載入對應的 Google Sheet 資料。</span>
             </div>
+            <a class="btn btn-soft" href="./settings.html">設定</a>
           </div>
-          <div class="card-body">
-            <form class="stack-form" id="trip-switch-form">
-              <div class="field">
-                <label for="trip-select">目前旅遊</label>
-                <select id="trip-select"></select>
-              </div>
-              <button class="btn btn-soft btn-block" type="submit">切換旅遊</button>
-            </form>
-
-            <div class="actions" style="margin-top:12px; gap: 8px;">
-              <button id="archive-trip-btn" class="btn btn-soft" type="button" style="flex: 1;">📦 封存旅遊</button>
+          <form class="stack-form" id="trip-switch-form">
+            <div class="field">
+              <label for="trip-select">目前旅遊</label>
+              <select id="trip-select"></select>
             </div>
+            <button class="btn btn-primary btn-block" type="submit">切換帳本</button>
+          </form>
+          <div class="notice" id="sync-status"><span class="status-dot"></span>正在準備旅遊資料...</div>
+        </aside>
+      </section>
 
-            <form class="stack-form" id="trip-create-form" style="margin-top:16px;">
-              <div class="field">
-                <label for="new-trip-name">新增旅遊名稱</label>
-                <input id="new-trip-name" type="text" placeholder="例如：大阪七日遊" autocomplete="off" />
+      <section class="metrics-grid" aria-label="統計摘要">
+        <article class="metric-card"><span>總支出</span><strong id="summary-total">NT$ 0</strong></article>
+        <article class="metric-card"><span>旅伴人數</span><strong id="summary-member-count">0 人</strong></article>
+        <article class="metric-card"><span>支出筆數</span><strong id="summary-count">0 筆</strong></article>
+        <article class="metric-card"><span>目前旅遊 ID</span><strong id="summary-trip-id">trip_default</strong></article>
+      </section>
+
+      <div class="work-layout">
+        <section class="content-stack">
+          <section class="card is-primary" id="expense-form">
+            <div class="card-header">
+              <div class="card-title">
+                <h2>新增支出</h2>
+                <p>依照「花了什麼 → 誰付誰分 → 收據備註」的順序填寫，旅行中比較不容易漏。</p>
               </div>
-              <button class="btn btn-primary btn-block" type="submit">＋ 新增旅遊</button>
-            </form>
-
-            <div class="notice" id="sync-status"><span class="status-dot"></span>正在準備旅遊資料...</div>
-            <div class="backend-note">資料隔離方式：每筆成員、分類、付款方式、支出都會帶 `trip_id`。切換旅遊時，用目前選到的 `trip_id` 重新讀取 Google Sheet。</div>
-          </div>
-        </section>
-
-        <section class="card" id="members">
-          <div class="card-header"><div class="card-title"><h2>分帳對象</h2><p>每個旅遊有自己的旅伴名單。</p></div></div>
-          <div class="card-body">
-            <form class="stack-form" id="member-form">
-              <div class="field"><label for="member-name">新增成員名稱</label><input id="member-name" type="text" placeholder="例如：Dustin" autocomplete="off" /></div>
-              <button class="btn btn-primary btn-block" type="submit">＋ 新增分帳對象</button>
-            </form>
-            <div class="item-list" id="member-list"></div>
-          </div>
-        </section>
-
-        <section class="card" id="categories">
-          <div class="card-header"><div class="card-title"><h2>分類管理</h2><p>可自行新增早餐、咖啡、門票等分類。</p></div></div>
-          <div class="card-body">
-            <form class="stack-form" id="category-form">
-              <div class="field"><label for="new-category-name">新增分類名稱</label><input id="new-category-name" type="text" placeholder="例如：早餐" autocomplete="off" /></div>
-              <div class="field"><label for="new-category-icon">分類圖示</label><input id="new-category-icon" type="text" placeholder="例如：🍳、☕、🎟" maxlength="4" /></div>
-              <button class="btn btn-primary btn-block" type="submit">＋ 新增分類</button>
-            </form>
-            <div class="item-list" id="category-list"></div>
-          </div>
-        </section>
-
-        <section class="card" id="payment-methods">
-          <div class="card-header"><div class="card-title"><h2>付款方式管理</h2><p>可自行新增現金、信用卡、LINE Pay、Suica。</p></div></div>
-          <div class="card-body">
-            <form class="stack-form" id="payment-form">
-              <div class="field"><label for="new-payment-name">新增付款方式</label><input id="new-payment-name" type="text" placeholder="例如：Suica" autocomplete="off" /></div>
-              <div class="field"><label for="new-payment-icon">付款方式圖示</label><input id="new-payment-icon" type="text" placeholder="例如：💵、💳、📱" maxlength="4" /></div>
-              <button class="btn btn-primary btn-block" type="submit">＋ 新增付款方式</button>
-            </form>
-            <div class="item-list" id="payment-list"></div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card-header"><div class="card-title"><h3>匯率</h3><p>匯率統一管理，支出表單不用手動輸入。</p></div></div>
-          <div class="card-body"><div class="item-list" id="rate-list"></div></div>
-        </section>
-      </aside>
-
-      <section class="content-stack">
-        <section class="card" id="expense-form">
-          <div class="card-header"><div class="card-title"><h2>新增支出</h2><p>資料會存到目前選取的旅遊。</p></div></div>
-          <div class="card-body">
-            <form id="expense-create-form" enctype="multipart/form-data">
-              <div class="form-grid">
-                <div class="field"><label for="expense-title">支出名稱</label><input id="expense-title" type="text" placeholder="例如：早餐、車票、住宿" required /></div>
-                <div class="field"><label for="paid-by">付款人</label><select id="paid-by" required></select></div>
-                <div class="field"><label for="category-id">分類</label><select id="category-id" required></select></div>
-                <div class="field"><label for="payment-method-id">付款方式</label><select id="payment-method-id" required></select></div>
-                <div class="inline-help">沒有想要的項目時，請到左側新增；新增後會出現在目前旅遊的選單中。</div>
-                <div class="field"><label for="expense-date">日期</label><input id="expense-date" type="date" /></div>
-                <div class="field"><label for="amount-original">原始金額</label><input id="amount-original" type="number" min="0" step="0.01" placeholder="例如：12000" required /></div>
-                <div class="field">
-                  <label for="expense-currency">原始幣別</label>
-                  <select id="expense-currency" required><option value="JPY">JPY 日圓</option><option value="USD">USD 美元</option><option value="KRW">KRW 韓元</option><option value="EUR">EUR 歐元</option><option value="THB">THB 泰銖</option><option value="TWD">TWD 新台幣</option></select>
+            </div>
+            <div class="card-body">
+              <form id="expense-create-form" enctype="multipart/form-data">
+                <div class="section-divider">1. 花了什麼</div>
+                <div class="form-grid">
+                  <div class="field"><label for="expense-title">支出名稱</label><input id="expense-title" type="text" placeholder="例如：早餐、車票、住宿" required /></div>
+                  <div class="field"><label for="expense-date">日期</label><input id="expense-date" type="date" /></div>
+                  <div class="field"><label for="amount-original">原始金額</label><input id="amount-original" type="number" min="0" step="0.01" placeholder="例如：12000" required /></div>
+                  <div class="field"><label for="expense-currency">原始幣別</label><select id="expense-currency" required><option value="JPY">JPY 日圓</option><option value="USD">USD 美元</option><option value="KRW">KRW 韓元</option><option value="EUR">EUR 歐元</option><option value="THB">THB 泰銖</option><option value="TWD">TWD 新台幣</option></select></div>
+                  <div class="field"><label for="rate-preview">系統套用匯率</label><input id="rate-preview" type="text" readonly /></div>
+                  <div class="field"><label for="amount-twd">換算台幣</label><input id="amount-twd" type="text" readonly /></div>
                 </div>
-                <div class="field"><label for="rate-preview">系統套用匯率</label><input id="rate-preview" type="text" readonly /></div>
-                <div class="field"><label for="amount-twd">換算台幣</label><input id="amount-twd" type="text" readonly /></div>
-                <div class="field full">
-                  <label>收據照片上傳</label>
-                  <div class="upload-box">
-                    <div class="upload-head"><span class="upload-icon">📷</span><div><strong>上傳收據照片</strong><span>可從相簿選擇，或直接開啟相機拍照；後端可上傳到 Google Drive。</span></div></div>
-                    <div class="upload-actions">
-                      <label class="upload-trigger" for="receipt-files">選擇相簿</label>
-                      <label class="upload-trigger secondary" for="receipt-camera-files">開啟相機</label>
-                    </div>
-                    <input id="receipt-files" class="file-input" type="file" accept="image/*" multiple />
-                    <input id="receipt-camera-files" class="file-input" type="file" accept="image/*" capture="environment" />
-                    <div class="receipt-preview" id="receipt-preview"></div>
+
+                <div class="section-divider">2. 誰付、誰分</div>
+                <div class="form-grid">
+                  <div class="field"><label for="paid-by">付款人</label><select id="paid-by" required></select></div>
+                  <div class="field"><label for="category-id">分類</label><div class="input-with-action"><select id="category-id" required></select><a class="btn btn-soft" href="./settings.html#categories">管理</a></div></div>
+                  <div class="field"><label for="payment-method-id">付款方式</label><div class="input-with-action"><select id="payment-method-id" required></select><a class="btn btn-soft" href="./settings.html#payment-methods">管理</a></div></div>
+                  <div class="inline-help">找不到分類、付款方式或旅伴時，請到設定頁新增；首頁保持專注記帳。</div>
+                </div>
+
+                <div class="field full" style="margin-top:16px;">
+                  <label>分帳方式</label>
+                  <div class="split-type">
+                    <label class="radio-card"><input type="radio" name="split_type" value="平均分" checked /><span>平均分</span></label>
+                    <label class="radio-card"><input type="radio" name="split_type" value="百分比分" /><span>百分比分</span></label>
+                    <label class="radio-card"><input type="radio" name="split_type" value="自訂金額" /><span>自訂金額</span></label>
                   </div>
                 </div>
-              </div>
 
-              <div class="field full" style="margin-top:16px;">
-                <label>分帳方式</label>
-                <div class="split-type">
-                  <label class="radio-card"><input type="radio" name="split_type" value="平均分" checked /><span>平均分</span></label>
-                  <label class="radio-card"><input type="radio" name="split_type" value="百分比分" /><span>百分比分</span></label>
-                  <label class="radio-card"><input type="radio" name="split_type" value="自訂金額" /><span>自訂金額</span></label>
+                <div class="field full" style="margin-top:16px;">
+                  <label>選擇這筆支出的分帳對象</label>
+                  <div class="participant-options" id="participant-options"></div>
                 </div>
+                <div class="field full split-config" id="split-config" style="margin-top:12px; display:none;"></div>
+
+                <div class="section-divider">3. 收據與備註</div>
+                <div class="form-grid">
+                  <div class="field full">
+                    <label>收據照片上傳</label>
+                    <div class="upload-box">
+                      <div class="upload-head"><span class="upload-icon">📷</span><div><strong>收據照片</strong><span>最多 4 張，可從相簿選擇或直接開啟相機。</span></div></div>
+                      <div class="upload-actions">
+                        <label class="upload-trigger" for="receipt-files">選擇相簿</label>
+                        <label class="upload-trigger secondary" for="receipt-camera-files">開啟相機</label>
+                      </div>
+                      <input id="receipt-files" class="file-input" type="file" accept="image/*" multiple />
+                      <input id="receipt-camera-files" class="file-input" type="file" accept="image/*" capture="environment" />
+                      <div class="receipt-preview" id="receipt-preview"></div>
+                    </div>
+                  </div>
+                  <div class="field full"><label for="note">備註</label><textarea id="note" placeholder="例如：Amy 沒有參加這餐，可取消勾選。"></textarea></div>
+                </div>
+
+                <div class="actions"><button class="btn btn-primary" type="submit">儲存支出</button><button class="btn btn-ghost" type="reset">清除表單</button></div>
+              </form>
+            </div>
+          </section>
+
+          <section class="card" id="expenses">
+            <div class="card-header"><div class="card-title"><h2>支出紀錄</h2><p id="expense-list-subtitle">依目前旅遊載入支出紀錄。</p></div><a class="btn btn-soft" href="#expense-form">＋ 新增</a></div>
+            <div class="card-body">
+              <div class="toolbar">
+                <div class="field"><label for="expense-search">快速搜尋</label><input id="expense-search" type="search" placeholder="搜尋名稱、付款人、分類、付款方式..." /></div>
               </div>
-
-              <div class="field full" style="margin-top:16px;">
-                <label>選擇這筆支出的分帳對象</label>
-                <div class="participant-options" id="participant-options"></div>
-              </div>
-
-              <div class="field full split-config" id="split-config" style="margin-top:12px; display:none;"></div>
-
-              <div class="field full" style="margin-top:16px;"><label for="note">備註</label><textarea id="note" placeholder="例如：先由 Dustin 刷卡，Amy 沒有參加這餐可取消勾選。"></textarea></div>
-              <div class="actions" style="margin-top:18px;"><button class="btn btn-primary" type="submit">儲存支出</button><button class="btn btn-soft" type="reset">清除表單</button></div>
-            </form>
-          </div>
+              <div class="expense-list" id="expense-list"></div>
+            </div>
+          </section>
         </section>
 
-        <section class="card" id="expenses">
-          <div class="card-header"><div class="card-title"><h2>支出紀錄</h2><p id="expense-list-subtitle">未來可從 /api/expenses?trip_id=... 載入。</p></div><a class="btn btn-soft" href="#expense-form">＋ 新增</a></div>
-          <div class="card-body"><div class="expense-list" id="expense-list"></div></div>
-        </section>
+        <aside class="side-stack">
+          <section class="card" id="balances">
+            <div class="card-header"><div class="card-title"><h2>個人收支平衡</h2><p>快速確認誰多付、誰少付。</p></div></div>
+            <div class="card-body"><div class="balance-grid" id="balance-grid"></div></div>
+          </section>
 
-        <section class="card" id="balances">
-          <div class="card-header"><div class="card-title"><h2>個人收支平衡</h2><p>實際 balance 可由後端依目前旅遊計算。</p></div></div>
-          <div class="card-body">
-            <div class="balance-grid member-balance-grid" id="balance-grid"></div>
-          </div>
-        </section>
-
-        <section class="card" id="settlements">
-          <div class="card-header"><div class="card-title"><h2>結算建議</h2><p>後端可以依台幣 balance 自動產生最少轉帳次數。</p></div></div>
-          <div class="card-body"><div class="settlement-list" id="settlement-list"></div></div>
-        </section>
-
-        <section class="card" id="archived-trips">
-          <div class="card-header"><div class="card-title"><h2>已封存旅遊</h2><p>查看封存的旅遊歷史數據。</p></div></div>
-          <div class="card-body">
-            <div class="item-list" id="archived-trips-list"></div>
-          </div>
-        </section>
-      </section>
+          <section class="card" id="settlements">
+            <div class="card-header"><div class="card-title"><h2>結算建議</h2><p>依台幣 balance 產生轉帳建議。</p></div></div>
+            <div class="card-body"><div class="settlement-list" id="settlement-list"></div></div>
+          </section>
+        </aside>
+      </div>
     </div>
   </main>
 
-  <footer class="footer"><div class="container">© 2026 TripSplit. Preview template for travel expense sharing.</div></footer>
+  <nav class="mobile-tabbar" aria-label="手機快速導覽">
+    <a href="./TripSplit.html">🏠<span>首頁</span></a>
+    <a href="#expense-form" class="primary">＋<span>支出</span></a>
+    <a href="#balances">💰<span>結算</span></a>
+    <a href="./settings.html">⚙<span>設定</span></a>
+  </nav>
+
+  <footer class="footer"><div class="container">© 2026 TripSplit. Travel expense sharing.</div></footer>
 
   <div class="receipt-modal" id="receipt-modal" aria-hidden="true" role="dialog" aria-label="收據照片預覽">
     <div class="receipt-modal-backdrop" data-close-receipt-modal="true"></div>
     <div class="receipt-modal-panel" role="document">
       <button class="receipt-modal-close" type="button" data-close-receipt-modal="true" aria-label="關閉照片">×</button>
       <img id="receipt-modal-image" src="" alt="收據照片" />
-      <div class="receipt-modal-actions">
-        <a id="receipt-modal-open-link" class="btn btn-soft" href="#" target="_blank" rel="noopener noreferrer">在新分頁開啟</a>
-      </div>
+      <div class="receipt-modal-actions"><a id="receipt-modal-open-link" class="btn btn-soft" href="#" target="_blank" rel="noopener noreferrer">在新分頁開啟</a></div>
     </div>
   </div>
 
-  <script src="./js/config.js?v=2"></script>
-  <script src="./js/api.js?v=2"></script>
-  <script src="./js/normalize.js?v=2"></script>
-  <script src="./js/data.js?v=2"></script>
-  <script src="./js/sync.js?v=2"></script>
-  <script src="./js/render.js?v=2"></script>
-  <script src="./js/balance.js?v=2"></script>
-  <script src="./js/split.js?v=2"></script>
-  <script src="./js/receipt.js?v=2"></script>
-  <script src="./js/events.js?v=2"></script>
+  <script src="./assets/app.js?v=11"></script>
 </body>
 </html>
