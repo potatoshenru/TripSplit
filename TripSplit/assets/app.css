@@ -357,6 +357,7 @@ label {
 
 input, select, textarea {
     width: 100%;
+    min-width: 0;
     min-height: 50px;
     border: 1px solid var(--line);
     border-radius: 15px;
@@ -906,13 +907,14 @@ input:focus, select:focus, textarea:focus {
 
 .expense-filters {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 10px;
     align-items: end;
     margin-bottom: 14px;
 }
 
 .expense-filter-clear {
+    width: 100%;
     min-height: 50px;
     white-space: nowrap;
 }
@@ -1506,14 +1508,6 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 1020px) {
     .hero-panel, .work-layout, .settings-layout {
         grid-template-columns: 1fr;
-    }
-
-    .expense-filters {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .expense-filter-clear {
-        width: 100%;
     }
 
     .settings-nav {
