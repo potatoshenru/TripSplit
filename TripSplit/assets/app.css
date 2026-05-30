@@ -1135,13 +1135,14 @@ input:focus, select:focus, textarea:focus {
 
 .expense-filters {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     align-items: end;
     margin-bottom: 14px;
 }
 
 .expense-filter-clear {
+    grid-column: 1 / -1;
     width: 100%;
     min-height: 50px;
     white-space: nowrap;
@@ -1245,6 +1246,10 @@ input:focus, select:focus, textarea:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.side-stack .settlement-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .balance-card {
     min-width: 0;
     padding: 16px;
@@ -1290,6 +1295,11 @@ input:focus, select:focus, textarea:focus {
     border-radius: 17px;
     background: var(--surface-strong);
     border: 1px solid var(--line);
+}
+
+.side-stack .settlement-item {
+    align-items: flex-start;
+    flex-direction: column;
 }
 
 .settlement-route {
@@ -1768,7 +1778,7 @@ input:focus, select:focus, textarea:focus {
         padding: 22px;
     }
 
-    .form-grid-3, .balance-grid, .side-stack .balance-grid, .settings-nav {
+    .form-grid-3, .settings-nav {
         grid-template-columns: 1fr;
     }
 
@@ -1830,7 +1840,7 @@ input:focus, select:focus, textarea:focus {
     }
 
     .expense-filters {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .expense-day-header {
@@ -1840,7 +1850,7 @@ input:focus, select:focus, textarea:focus {
     }
 
     .chart-toolbar, .chart-legend {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .mobile-tabbar {
