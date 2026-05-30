@@ -665,7 +665,7 @@ function updateExchangePreview() {
     const currency = $('#expense-currency').value;
     const amount = Number($('#amount-original').value || 0);
     const rate = Number(exchangeRates[currency] || 1);
-    $('#rate-preview').value = `${currency} → TWD：${rate}`;
+    $('#rate-preview').value = `${currency} ${rate}`;
     $('#amount-twd').value = amount ? `NT$ ${money.format(Math.round(amount * rate))}` : '輸入金額後自動換算';
 }
 
