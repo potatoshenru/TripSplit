@@ -13,8 +13,6 @@
             <a href="./TripSplit.html" class="brand" aria-label="TripSplit 首頁"><span class="brand-icon">旅</span><span>TripSplit</span></a>
             <nav class="nav-links" aria-label="主要導覽">
                 <a href="./TripSplit.html" class="active">快速記帳</a>
-                <a href="#expenses">支出紀錄</a>
-                <a href="#balances">收支平衡</a>
                 <a href="./settings.html">設定管理</a>
             </nav>
         </div>
@@ -59,7 +57,13 @@
                 <article class="metric-card"><span>目前旅遊 ID</span><strong id="summary-trip-id">trip_default</strong></article>
             </section>
 
-            <div class="work-layout">
+            <nav class="dashboard-tabs" aria-label="首頁主要功能">
+                <button class="dashboard-tab active" type="button" data-dashboard-tab="quick" aria-selected="true">快速記帳</button>
+                <button class="dashboard-tab" type="button" data-dashboard-tab="records" aria-selected="false">支出紀錄</button>
+                <button class="dashboard-tab" type="button" data-dashboard-tab="overview" aria-selected="false">收支總覽</button>
+            </nav>
+
+            <div class="work-layout" data-active-tab="quick">
                 <section class="content-stack">
                     <section class="card is-primary" id="expense-form">
                         <div class="card-header">

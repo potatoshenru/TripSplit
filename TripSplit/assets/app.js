@@ -1366,15 +1366,15 @@ function getVisibleExpenses() {
         if (!keyword) return true;
 
         return [
-        dateKey,
-        expense.title,
-        expense.payer,
-        expense.category,
-        expense.payment,
-        expense.currency,
-        expense.split,
-        String(expense.amount || ''),
-        String(expense.twd || '')
+            dateKey,
+            expense.title,
+            expense.payer,
+            expense.category,
+            expense.payment,
+            expense.currency,
+            expense.split,
+            String(expense.amount || ''),
+            String(expense.twd || '')
         ].some(value => String(value || '').toLowerCase().includes(keyword));
     }).sort((a, b) => {
         const timeDiff = getExpenseDateTime(b) - getExpenseDateTime(a);
@@ -1618,6 +1618,85 @@ function bindGlobalClicks() {
     });
 }
 
+function getDashboardTabFromHash(hash = window.location.hash) {
+    const normalizedHash = String(hash || '').toLowerCase();
+    if (normalizedHash === '#expenses') return 'records';
+    if (['#balances', '#settlements', '#expense-charts'].includes(normalizedHash)) return 'overview';
+    return 'quick';
+}
+
+function getDashboardTabTarget(tab) {
+    if (tab === 'records') return '#expenses';
+    if (tab === 'overview') return '#balances';
+    return '#expense-form';
+}
+
+function setDashboardTab(tab, options = {}) {
+    const layout = $('.work-layout');
+    const contentStack = $('.content-stack');
+    const expenseForm = $('#expense-form');
+    const expensesPanel = $('#expenses');
+    const sideStack = $('.side-stack');
+    if (!layout || !contentStack || !expenseForm || !expensesPanel || !sideStack) return;
+
+    const activeTab = ['quick', 'records', 'overview'].includes(tab) ? tab : 'quick';
+    layout.dataset.activeTab = activeTab;
+    contentStack.hidden = activeTab === 'overview';
+    expenseForm.hidden = activeTab !== 'quick';
+    expensesPanel.hidden = activeTab !== 'records';
+    sideStack.hidden = activeTab !== 'overview';
+
+    document.querySelectorAll('[data-dashboard-tab]').forEach(button => {
+        const isActive = button.dataset.dashboardTab === activeTab;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', String(isActive));
+    });
+
+    if (options.updateHash) {
+        const hash = getDashboardTabTarget(activeTab);
+        if (window.location.hash !== hash) history.pushState(null, '', hash);
+    }
+
+    if (activeTab === 'overview') {
+        if (typeof renderExpenseChart === 'function') renderExpenseChart();
+        if (typeof renderBudgetChart === 'function') renderBudgetChart();
+    }
+
+    if (options.scroll) {
+        const target = $(getDashboardTabTarget(activeTab));
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function bindDashboardTabs() {
+    if (!$('.dashboard-tabs')) return;
+
+    document.querySelectorAll('[data-dashboard-tab]').forEach(button => {
+        button.addEventListener('click', () => {
+            setDashboardTab(button.dataset.dashboardTab, { updateHash: true, scroll: true });
+        });
+    });
+
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest('a[href^="#"]');
+        if (!link) return;
+        const tab = getDashboardTabFromHash(link.getAttribute('href'));
+        const href = link.getAttribute('href');
+        if (!['#expense-form', '#expenses', '#balances', '#settlements', '#expense-charts'].includes(href)) return;
+        event.preventDefault();
+        setDashboardTab(tab, { updateHash: true, scroll: true });
+    });
+
+    window.addEventListener('hashchange', () => {
+        setDashboardTab(getDashboardTabFromHash(), { updateHash: false, scroll: false });
+    });
+    window.addEventListener('popstate', () => {
+        setDashboardTab(getDashboardTabFromHash(), { updateHash: false, scroll: false });
+    });
+
+    setDashboardTab(getDashboardTabFromHash(), { updateHash: false, scroll: false });
+}
+
 function bindExpenseForm() {
     if (typeof renderExpenseChart === 'function') {
         document.querySelectorAll('input[name="chart_type"]').forEach(input => input.addEventListener('change', () => {
@@ -1773,7 +1852,7 @@ function bindExpenseForm() {
         if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
         updateExchangePreview();
         renderSplitConfig();
-        $('#expenses')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setDashboardTab('records', { updateHash: true, scroll: true });
     });
 }
 
@@ -1883,7 +1962,7 @@ function bindImportTextModal() {
                 updateExchangePreview();
             }
             closeImportTextModal();
-            $('#expense-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setDashboardTab('quick', { updateHash: true, scroll: true });
             return;
         }
 
@@ -1920,6 +1999,7 @@ function bindAppEvents() {
     bindTripSwitch();
     bindSettingsForms();
     bindGlobalClicks();
+    bindDashboardTabs();
     bindExpenseForm();
     bindKeyboard();
     bindImportTextModal();
