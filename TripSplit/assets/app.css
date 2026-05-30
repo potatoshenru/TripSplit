@@ -465,6 +465,157 @@ input:focus, select:focus, textarea:focus {
     align-items: end;
 }
 
+.roc-date-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 46px;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.roc-date-display {
+    letter-spacing: 0;
+}
+
+.roc-date-button {
+    position: relative;
+    min-height: 50px;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    font-weight: 950;
+}
+
+.roc-date-button::before {
+    content: "";
+    width: 18px;
+    height: 18px;
+    display: block;
+    margin: 0 auto;
+    border: 2px solid currentColor;
+    border-radius: 5px;
+    box-shadow: inset 0 5px 0 rgba(181, 111, 24, .18);
+}
+
+.roc-date-button::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 16px;
+    width: 12px;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+    transform: translateX(-50%);
+}
+
+.roc-date-button:hover,
+.roc-date-button:focus-visible {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(181, 111, 24, .14);
+}
+
+.roc-date-picker {
+    position: fixed;
+    z-index: 200;
+    display: none;
+    padding: 12px;
+    border: 1px solid #d6b07b;
+    border-radius: 16px;
+    background: #fffdf8;
+    box-shadow: 0 18px 44px rgba(65, 42, 20, .22);
+}
+
+.roc-date-picker.show {
+    display: block;
+}
+
+.roc-date-picker-head {
+    display: grid;
+    grid-template-columns: 36px 1fr 36px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.roc-date-picker-head strong {
+    text-align: center;
+    color: var(--text);
+    font-size: .98rem;
+    line-height: 1.2;
+}
+
+.roc-date-nav {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: #f3e7d5;
+    color: var(--primary-dark);
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.roc-date-weekdays,
+.roc-date-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+}
+
+.roc-date-weekdays {
+    margin-bottom: 5px;
+    color: #6d5e50;
+    font-size: .8rem;
+    font-weight: 950;
+    text-align: center;
+}
+
+.roc-date-day {
+    aspect-ratio: 1;
+    min-height: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font-size: .88rem;
+    font-weight: 800;
+}
+
+.roc-date-day:hover,
+.roc-date-day.today {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+}
+
+.roc-date-day.selected {
+    background: var(--text);
+    color: #fff;
+}
+
+.roc-date-day.muted {
+    color: #9b8b7c;
+}
+
+.roc-date-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.roc-date-actions button {
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--primary-dark);
+    font-weight: 950;
+}
+
+.roc-date-actions button:hover {
+    background: var(--primary-soft);
+}
+
 .native-icon-select {
     position: absolute;
     width: 1px;

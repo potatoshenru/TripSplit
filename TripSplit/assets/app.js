@@ -68,6 +68,7 @@ const fallbackDataByTrip = {
 const money = new Intl.NumberFormat('zh-TW');
 const $ = (selector) => document.querySelector(selector);
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 function getStoredTripModifiedTimes() {
     try {
         return JSON.parse(localStorage.getItem('tripsplit_trip_modified_at') || '{}') || {};
@@ -1319,7 +1320,8 @@ function formatExpenseDateHeading(dateKey) {
     if (!dateKey) return '未設定消費日期';
     const date = new Date(`${dateKey}T00:00:00`);
     if (Number.isNaN(date.getTime())) return dateKey;
-    return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).format(date);
+    const weekday = new Intl.DateTimeFormat('zh-TW', { weekday: 'short' }).format(date);
+    return `${formatRocDate(dateKey)} ${weekday}`;
 }
 
 function uniqueExpenseValues(key) {
@@ -1770,8 +1772,8 @@ function bindExpenseForm() {
                 if (input.value) {
                     expenseFilters.from = '';
                     expenseFilters.to = '';
-                    if (fromInput) fromInput.value = '';
-                    if (toInput) toInput.value = '';
+                    setRocDateValue(fromInput, '');
+                    setRocDateValue(toInput, '');
                 }
             }
             renderExpenses();
@@ -1784,14 +1786,14 @@ function bindExpenseForm() {
         if (searchInput) searchInput.value = '';
         filterBindings.forEach(([selector]) => {
             const input = $(selector);
-            if (input) input.value = '';
+            setRocDateValue(input, '');
         });
         renderExpenses();
     });
 
     const dateInput = $('#expense-date');
     if (dateInput && !dateInput.value) {
-        dateInput.value = new Date().toISOString().slice(0, 10);
+        setRocDateValue(dateInput, getLocalTodayIso());
     }
 
     const expenseForm = $('#expense-create-form');
@@ -1805,7 +1807,7 @@ function bindExpenseForm() {
             updateExchangePreview();
             renderSplitConfig();
             syncAllIconSelects();
-            if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+            setRocDateValue(dateInput, getLocalTodayIso());
         }, 0);
     });
     expenseForm.addEventListener('submit', async (event) => {
@@ -1849,7 +1851,7 @@ function bindExpenseForm() {
         expenseForm.reset();
         applyPreferredExpenseCurrency(currency);
         clearReceiptFiles();
-        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+        setRocDateValue(dateInput, getLocalTodayIso());
         updateExchangePreview();
         renderSplitConfig();
         setDashboardTab('records', { updateHash: true, scroll: true });
@@ -1898,7 +1900,7 @@ function renderImportTextResult() {
     list.innerHTML = importTextItems.map((item, idx) => `
     <div class="import-text-result-row" data-import-idx="${idx}">
       <div class="import-text-result-info">
-        <span class="import-text-result-date">${escapeHtml(item.date)}</span>
+        <span class="import-text-result-date">${escapeHtml(formatRocDate(parseRocDate(item.date)) || item.date)}</span>
         <span class="import-text-result-title">${escapeHtml(item.title)}</span>
         <span class="import-text-result-amount">${item.amount.toLocaleString()}</span>
       </div>
@@ -1955,7 +1957,7 @@ function bindImportTextModal() {
             if (dateInput && item.date) {
                 // try parse date: YYYY/MM/DD or YYYY-MM-DD
                 const normalized = item.date.replace(/\//g, '-');
-                dateInput.value = normalized;
+                setRocDateValue(dateInput, normalized);
             }
             if (amountInput) {
                 amountInput.value = item.amount;
@@ -1979,6 +1981,10 @@ function bindImportTextModal() {
 function bindKeyboard() {
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Escape') return;
+        if (activeRocDateInput) {
+            closeRocDatePicker();
+            return;
+        }
         if (document.querySelector('.icon-select.open')) {
             closeIconSelects();
             return;
@@ -1996,6 +2002,7 @@ function bindKeyboard() {
 }
 
 function bindAppEvents() {
+    enhanceRocDateInputs();
     bindTripSwitch();
     bindSettingsForms();
     bindGlobalClicks();

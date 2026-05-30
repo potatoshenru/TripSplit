@@ -1,6 +1,12 @@
 const chartColors = ['#b56f18', '#557f3f', '#b84a3d', '#386fa4', '#8a5f9e', '#c76f2d', '#2f7f74', '#9a6b3f'];
 let chartHitRegions = [];
 
+function formatChartDateLabel(label) {
+  const value = String(label || '');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value) && typeof formatRocDate === 'function') return formatRocDate(value);
+  return value;
+}
+
 function getSelectedChartType() {
   return document.querySelector('input[name="chart_type"]:checked')?.value || 'pie';
 }
@@ -360,7 +366,8 @@ function drawCategoryCumulativeLineChart(context, data, width, height) {
   dates.forEach((date, index) => {
     if (dates.length > 5 && index % Math.ceil(dates.length / 5) !== 0 && index !== dates.length - 1) return;
     const x = padding.left + (dates.length === 1 ? chartWidth / 2 : (chartWidth * index) / (dates.length - 1));
-    context.fillText(date.slice(5) || date.slice(0, 6), x, height - 16);
+    const dateLabel = formatChartDateLabel(date);
+    context.fillText(/^\d{4}-\d{2}-\d{2}$/.test(date) ? dateLabel.replace(/^民國/, '') : dateLabel, x, height - 16);
   });
 }
 
