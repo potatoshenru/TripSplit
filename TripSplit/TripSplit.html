@@ -133,6 +133,15 @@
                             <div class="toolbar">
                                 <div class="field"><label for="expense-search">快速搜尋</label><input id="expense-search" type="search" placeholder="搜尋名稱、付款人、分類、付款方式..." /></div>
                             </div>
+                            <div class="expense-filters" aria-label="支出篩選">
+                                <div class="field"><label for="expense-date-quick">日期快速查詢</label><input id="expense-date-quick" type="date" /></div>
+                                <div class="field"><label for="expense-filter-category">分類</label><select id="expense-filter-category"><option value="">全部分類</option></select></div>
+                                <div class="field"><label for="expense-filter-payer">付款人</label><select id="expense-filter-payer"><option value="">全部付款人</option></select></div>
+                                <div class="field"><label for="expense-filter-payment">付款方式</label><select id="expense-filter-payment"><option value="">全部方式</option></select></div>
+                                <div class="field"><label for="expense-filter-from">起始日期</label><input id="expense-filter-from" type="date" /></div>
+                                <div class="field"><label for="expense-filter-to">結束日期</label><input id="expense-filter-to" type="date" /></div>
+                                <button class="btn btn-ghost expense-filter-clear" type="button" id="expense-filter-clear">清除篩選</button>
+                            </div>
                             <div class="expense-list" id="expense-list"></div>
                         </div>
                     </section>

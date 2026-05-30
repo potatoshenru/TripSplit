@@ -1025,6 +1025,14 @@ async function getReceiptPayloads() {
 }
 
 let expenseSearchTerm = '';
+let expenseFilters = {
+    quickDate: '',
+    category: '',
+    payer: '',
+    payment: '',
+    from: '',
+    to: ''
+};
 let pendingExpenseResetCurrency = '';
 
 function safeSetText(selector, value) {
@@ -1291,10 +1299,74 @@ function renderSelects() {
     syncAllIconSelects();
 }
 
+function toExpenseDateKey(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const normalized = raw.replace(/\//g, '-');
+    const match = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (match) return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
+    const time = Date.parse(raw);
+    return Number.isFinite(time) ? new Date(time).toISOString().slice(0, 10) : '';
+}
+
+function getExpenseDateTime(expense) {
+    const key = toExpenseDateKey(expense.date);
+    const time = Date.parse(key || expense.date || '');
+    return Number.isFinite(time) ? time : 0;
+}
+
+function formatExpenseDateHeading(dateKey) {
+    if (!dateKey) return '未設定消費日期';
+    const date = new Date(`${dateKey}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return dateKey;
+    return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' }).format(date);
+}
+
+function uniqueExpenseValues(key) {
+    return [...new Set(expenses.map(expense => String(expense[key] || '').trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+}
+
+function renderExpenseFilters() {
+    const setOptions = (selector, placeholder, values, selectedValue) => {
+        const select = $(selector);
+        if (!select) return '';
+        const currentValue = selectedValue || select.value || '';
+        select.innerHTML = `<option value="">${placeholder}</option>` + values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+        select.value = values.includes(currentValue) ? currentValue : '';
+        return select.value;
+    };
+
+    expenseFilters.category = setOptions('#expense-filter-category', '全部分類', uniqueExpenseValues('category'), expenseFilters.category);
+    expenseFilters.payer = setOptions('#expense-filter-payer', '全部付款人', uniqueExpenseValues('payer'), expenseFilters.payer);
+    expenseFilters.payment = setOptions('#expense-filter-payment', '全部方式', uniqueExpenseValues('payment'), expenseFilters.payment);
+
+    const searchInput = $('#expense-search');
+    if (searchInput) {
+        const label = document.querySelector('label[for="expense-search"]');
+        if (label) label.textContent = '快速搜尋';
+        searchInput.placeholder = '搜尋日期、名稱、付款人、分類、付款方式...';
+    }
+}
+
 function getVisibleExpenses() {
     const keyword = expenseSearchTerm.trim().toLowerCase();
-    if (!keyword) return expenses;
-    return expenses.filter(expense => [
+    const quickDate = toExpenseDateKey(expenseFilters.quickDate);
+    const fromDate = toExpenseDateKey(expenseFilters.from);
+    const toDate = toExpenseDateKey(expenseFilters.to);
+
+    return expenses.filter(expense => {
+        const dateKey = toExpenseDateKey(expense.date);
+        if (quickDate && dateKey !== quickDate) return false;
+        if (fromDate && (!dateKey || dateKey < fromDate)) return false;
+        if (toDate && (!dateKey || dateKey > toDate)) return false;
+        if (expenseFilters.category && String(expense.category || '') !== expenseFilters.category) return false;
+        if (expenseFilters.payer && String(expense.payer || '') !== expenseFilters.payer) return false;
+        if (expenseFilters.payment && String(expense.payment || '') !== expenseFilters.payment) return false;
+        if (!keyword) return true;
+
+        return [
+        dateKey,
         expense.title,
         expense.payer,
         expense.category,
@@ -1303,7 +1375,21 @@ function getVisibleExpenses() {
         expense.split,
         String(expense.amount || ''),
         String(expense.twd || '')
-    ].some(value => String(value || '').toLowerCase().includes(keyword)));
+        ].some(value => String(value || '').toLowerCase().includes(keyword));
+    }).sort((a, b) => {
+        const timeDiff = getExpenseDateTime(b) - getExpenseDateTime(a);
+        if (timeDiff) return timeDiff;
+        return expenses.indexOf(b) - expenses.indexOf(a);
+    });
+}
+
+function groupExpensesByDate(visibleExpenses) {
+    return visibleExpenses.reduce((groups, expense) => {
+        const dateKey = toExpenseDateKey(expense.date);
+        if (!groups.has(dateKey)) groups.set(dateKey, []);
+        groups.get(dateKey).push(expense);
+        return groups;
+    }, new Map());
 }
 
 function renderExpenses() {
@@ -1313,14 +1399,38 @@ function renderExpenses() {
     safeSetText('#summary-count', `${expenses.length} 筆`);
 
     if (!list) return;
+    renderExpenseFilters();
+
     const visibleExpenses = getVisibleExpenses();
-    list.innerHTML = visibleExpenses.map(expense => `
-    <article class="expense-item">
-      <div class="expense-icon">${expense.icon}</div>
-      <div class="expense-meta"><strong>${expense.title}</strong><span>付款人 ${expense.payer || '未指定'}・${expense.category || '未分類'}・付款方式 ${expense.payment || '未指定'}・${expense.currency} ${money.format(expense.amount)}・系統匯率 ${expense.rate}・${expense.split}</span>${buildReceiptLinks(expense)}</div>
-      <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd))}</strong><small>${expense.synced ? 'Google Sheet 資料' : '本機預覽'}</small></div>
-    </article>
-  `).join('') || `<p class="field-hint">${expenseSearchTerm ? '沒有符合搜尋的支出。' : '這個旅遊目前沒有支出。'}</p>`;
+    const groupedExpenses = groupExpensesByDate(visibleExpenses);
+    const hasActiveFilters = Boolean(expenseSearchTerm || Object.values(expenseFilters).some(Boolean));
+
+    list.innerHTML = Array.from(groupedExpenses.entries()).map(([dateKey, dayExpenses]) => {
+        const dayTotal = dayExpenses.reduce((sum, expense) => sum + Number(expense.twd || 0), 0);
+        return `
+    <section class="expense-day-group">
+      <div class="expense-day-header">
+        <div>
+          <strong>${formatExpenseDateHeading(dateKey)}</strong>
+          <span>${dayExpenses.length} 筆支出</span>
+        </div>
+        <strong>NT$ ${money.format(Math.round(dayTotal))}</strong>
+      </div>
+      <div class="expense-day-list">
+        ${dayExpenses.map(expense => `
+        <article class="expense-item">
+          <div class="expense-icon">${escapeHtml(expense.icon || '')}</div>
+          <div class="expense-meta">
+            <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
+            <span>付款人 ${escapeHtml(expense.payer || '未設定')} · ${escapeHtml(expense.category || '未分類')} · ${escapeHtml(expense.payment || '未設定付款方式')} · ${escapeHtml(expense.currency || 'TWD')} ${money.format(Number(expense.amount || 0))} · 匯率 ${money.format(Number(expense.rate || 1))} · ${escapeHtml(expense.split || '')}</span>
+            ${buildReceiptLinks(expense)}
+          </div>
+          <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
+        </article>
+        `).join('')}
+      </div>
+    </section>`;
+    }).join('') || `<p class="field-hint">${hasActiveFilters ? '沒有符合搜尋或篩選的支出。' : '這個旅遊目前沒有支出。'}</p>`;
 }
 
 function bindTripSwitch() {
@@ -1560,6 +1670,45 @@ function bindExpenseForm() {
             renderExpenses();
         });
     }
+
+    const filterBindings = [
+        ['#expense-date-quick', 'quickDate'],
+        ['#expense-filter-category', 'category'],
+        ['#expense-filter-payer', 'payer'],
+        ['#expense-filter-payment', 'payment'],
+        ['#expense-filter-from', 'from'],
+        ['#expense-filter-to', 'to']
+    ];
+
+    filterBindings.forEach(([selector, key]) => {
+        const input = $(selector);
+        if (!input) return;
+        input.addEventListener('change', () => {
+            expenseFilters[key] = input.value || '';
+            if (key === 'quickDate') {
+                const fromInput = $('#expense-filter-from');
+                const toInput = $('#expense-filter-to');
+                if (input.value) {
+                    expenseFilters.from = '';
+                    expenseFilters.to = '';
+                    if (fromInput) fromInput.value = '';
+                    if (toInput) toInput.value = '';
+                }
+            }
+            renderExpenses();
+        });
+    });
+
+    $('#expense-filter-clear')?.addEventListener('click', () => {
+        expenseSearchTerm = '';
+        expenseFilters = { quickDate: '', category: '', payer: '', payment: '', from: '', to: '' };
+        if (searchInput) searchInput.value = '';
+        filterBindings.forEach(([selector]) => {
+            const input = $(selector);
+            if (input) input.value = '';
+        });
+        renderExpenses();
+    });
 
     const dateInput = $('#expense-date');
     if (dateInput && !dateInput.value) {
