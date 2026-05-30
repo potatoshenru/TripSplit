@@ -20,8 +20,8 @@ let currentTripId = storedTripId || 'trip_default';
 let shouldSelectLatestTripOnLoad = storedTripSelectionMode !== 'manual';
 
 let trips = [
-  { id: 'trip_default', name: '東京五日遊', baseCurrency: 'TWD' },
-  { id: 'trip_osaka', name: '大阪七日遊', baseCurrency: 'TWD' }
+    { id: 'trip_default', name: '東京五日遊', baseCurrency: 'TWD' },
+    { id: 'trip_osaka', name: '大阪七日遊', baseCurrency: 'TWD' }
 ];
 let archivedTrips = [];
 let members = [];
@@ -35,98 +35,98 @@ let exchangeRates = { JPY: 0.2185, USD: 32.1, KRW: 0.0235, EUR: 34.8, THB: 0.88,
 const MAX_RECEIPT_FILES = 4;
 
 const fallbackDataByTrip = {
-  trip_default: {
-    members: [
-      { id: 'mem_1', name: 'Dustin', note: '發起人', avatar: 'D' },
-      { id: 'mem_2', name: 'Amy', note: '旅伴', avatar: 'A' },
-      { id: 'mem_3', name: 'Ben', note: '旅伴', avatar: 'B' },
-      { id: 'mem_4', name: 'Cindy', note: '旅伴', avatar: 'C' }
-    ],
-    categories: [
-      { id: 'cat_1', name: '餐飲', icon: '🍜', note: '預設分類' },
-      { id: 'cat_2', name: '早餐', icon: '🍳', note: '自訂分類' },
-      { id: 'cat_3', name: '門票', icon: '🎟', note: '自訂分類' },
-      { id: 'cat_4', name: '交通', icon: '🚆', note: '預設分類' }
-    ],
-    paymentMethods: [
-      { id: 'pay_1', name: '現金', icon: '💵', note: '預設方式' },
-      { id: 'pay_2', name: 'Visa', icon: '💳', note: '信用卡' },
-      { id: 'pay_3', name: 'LINE Pay', icon: '📱', note: '行動支付' }
-    ],
-    expenses: [
-      { title: '築地早餐', icon: '🍳', payer: 'Dustin', category: '早餐', payment: 'Visa', currency: 'JPY', amount: 12000, rate: 0.2185, twd: 2622, split: '平均分' }
-    ]
-  },
-  trip_osaka: {
-    members: [{ id: 'mem_o1', name: 'Dustin', note: '發起人', avatar: 'D' }],
-    categories: [{ id: 'cat_o1', name: '餐飲', icon: '🍜', note: '預設分類' }],
-    paymentMethods: [{ id: 'pay_o1', name: '現金', icon: '💵', note: '預設方式' }],
-    expenses: []
-  }
+    trip_default: {
+        members: [
+            { id: 'mem_1', name: 'Dustin', note: '發起人', avatar: 'D' },
+            { id: 'mem_2', name: 'Amy', note: '旅伴', avatar: 'A' },
+            { id: 'mem_3', name: 'Ben', note: '旅伴', avatar: 'B' },
+            { id: 'mem_4', name: 'Cindy', note: '旅伴', avatar: 'C' }
+        ],
+        categories: [
+            { id: 'cat_1', name: '餐飲', icon: '🍜', note: '預設分類' },
+            { id: 'cat_2', name: '早餐', icon: '🍳', note: '自訂分類' },
+            { id: 'cat_3', name: '門票', icon: '🎟', note: '自訂分類' },
+            { id: 'cat_4', name: '交通', icon: '🚆', note: '預設分類' }
+        ],
+        paymentMethods: [
+            { id: 'pay_1', name: '現金', icon: '💵', note: '預設方式' },
+            { id: 'pay_2', name: 'Visa', icon: '💳', note: '信用卡' },
+            { id: 'pay_3', name: 'LINE Pay', icon: '📱', note: '行動支付' }
+        ],
+        expenses: [
+            { title: '築地早餐', icon: '🍳', payer: 'Dustin', category: '早餐', payment: 'Visa', currency: 'JPY', amount: 12000, rate: 0.2185, twd: 2622, split: '平均分' }
+        ]
+    },
+    trip_osaka: {
+        members: [{ id: 'mem_o1', name: 'Dustin', note: '發起人', avatar: 'D' }],
+        categories: [{ id: 'cat_o1', name: '餐飲', icon: '🍜', note: '預設分類' }],
+        paymentMethods: [{ id: 'pay_o1', name: '現金', icon: '💵', note: '預設方式' }],
+        expenses: []
+    }
 };
 
 const money = new Intl.NumberFormat('zh-TW');
 const $ = (selector) => document.querySelector(selector);
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 function getStoredTripModifiedTimes() {
-  try {
-    return JSON.parse(localStorage.getItem('tripsplit_trip_modified_at') || '{}') || {};
-  } catch (_) {
-    return {};
-  }
+    try {
+        return JSON.parse(localStorage.getItem('tripsplit_trip_modified_at') || '{}') || {};
+    } catch (_) {
+        return {};
+    }
 }
 
 function getStoredTripModifiedAt(tripId) {
-  return getStoredTripModifiedTimes()[tripId] || '';
+    return getStoredTripModifiedTimes()[tripId] || '';
 }
 
 function markTripModified(tripId) {
-  if (!tripId) return;
-  const modifiedTimes = getStoredTripModifiedTimes();
-  modifiedTimes[tripId] = new Date().toISOString();
-  localStorage.setItem('tripsplit_trip_modified_at', JSON.stringify(modifiedTimes));
+    if (!tripId) return;
+    const modifiedTimes = getStoredTripModifiedTimes();
+    modifiedTimes[tripId] = new Date().toISOString();
+    localStorage.setItem('tripsplit_trip_modified_at', JSON.stringify(modifiedTimes));
 }
 
 function currentTrip() {
-  return trips.find(trip => trip.id === currentTripId) || trips[0];
+    return trips.find(trip => trip.id === currentTripId) || trips[0];
 }
 
 function setStatus(message, type = 'info') {
-  const notice = $('#sync-status');
-  if (!notice) return;
-  const dotColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--orange)';
-  notice.classList.toggle('is-floating', type !== 'success');
-  notice.innerHTML = `<span class="status-dot" style="background:${dotColor}"></span>${message}`;
+    const notice = $('#sync-status');
+    if (!notice) return;
+    const dotColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--orange)';
+    notice.classList.toggle('is-floating', type !== 'success');
+    notice.innerHTML = `<span class="status-dot" style="background:${dotColor}"></span>${message}`;
 }
 
 async function postToGas(action, payload = {}, options = {}) {
-  const timeoutMs = Number.isFinite(options.timeoutMs) ? Math.max(3000, options.timeoutMs) : 12000;
+    const timeoutMs = Number.isFinite(options.timeoutMs) ? Math.max(3000, options.timeoutMs) : 12000;
 
-  let lastError = null;
-  for (let index = 0; index < GAS_POST_URLS.length; index += 1) {
-    const endpoint = GAS_POST_URLS[index];
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    let lastError = null;
+    for (let index = 0; index < GAS_POST_URLS.length; index += 1) {
+        const endpoint = GAS_POST_URLS[index];
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-    try {
-      await fetch(endpoint, {
-        method: 'POST',
-        mode: 'no-cors',
-        redirect: 'follow',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action, payload }),
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      return { ok: true };
-    } catch (error) {
-      clearTimeout(timeout);
-      lastError = error;
-      console.warn(`POST 到 GAS 失敗，切換 URL：${endpoint}`, error);
+        try {
+            await fetch(endpoint, {
+                method: 'POST',
+                mode: 'no-cors',
+                redirect: 'follow',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action, payload }),
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+            return { ok: true };
+        } catch (error) {
+            clearTimeout(timeout);
+            lastError = error;
+            console.warn(`POST 到 GAS 失敗，切換 URL：${endpoint}`, error);
+        }
     }
-  }
 
-  throw lastError || new Error('GAS POST 失敗，無可用 URL。');
+    throw lastError || new Error('GAS POST 失敗，無可用 URL。');
 }
 
 async function jsonp(action, payload = {}, options = {}) {
@@ -246,298 +246,298 @@ async function postToGasBlind(action, payload = {}, options = {}) {
     }
 }
 function normalizeMembers(rows) {
-  return rows.filter(row => String(row.is_active).toLowerCase() !== 'false').map(row => ({
-    id: row.member_id || row.id,
-    name: row.member_name || row.name,
-    note: row.email_or_note || row.note || '旅伴',
-    avatar: row.avatar_text || String(row.member_name || row.name || '?').slice(0, 1).toUpperCase()
-  })).filter(item => item.id && item.name);
+    return rows.filter(row => String(row.is_active).toLowerCase() !== 'false').map(row => ({
+        id: row.member_id || row.id,
+        name: row.member_name || row.name,
+        note: row.email_or_note || row.note || '旅伴',
+        avatar: row.avatar_text || String(row.member_name || row.name || '?').slice(0, 1).toUpperCase()
+    })).filter(item => item.id && item.name);
 }
 
 function normalizeCategories(rows) {
-  return rows.filter(row => String(row.is_active).toLowerCase() !== 'false').map(row => ({
-    id: row.category_id || row.id,
-    name: row.category_name || row.name,
-    icon: row.icon || '🏷',
-    note: row.note || '自訂分類'
-  })).filter(item => item.id && item.name);
+    return rows.filter(row => String(row.is_active).toLowerCase() !== 'false').map(row => ({
+        id: row.category_id || row.id,
+        name: row.category_name || row.name,
+        icon: row.icon || '🏷',
+        note: row.note || '自訂分類'
+    })).filter(item => item.id && item.name);
 }
 
 function normalizePaymentMethods(rows) {
-  return rows.filter(row => String(row.is_active).toLowerCase() !== 'false').map(row => ({
-    id: row.payment_method_id || row.id,
-    name: row.payment_method_name || row.name,
-    icon: row.icon || '💳',
-    note: row.note || '付款方式'
-  })).filter(item => item.id && item.name);
+    return rows.filter(row => String(row.is_active).toLowerCase() !== 'false').map(row => ({
+        id: row.payment_method_id || row.id,
+        name: row.payment_method_name || row.name,
+        icon: row.icon || '💳',
+        note: row.note || '付款方式'
+    })).filter(item => item.id && item.name);
 }
 
 function normalizeRates(rowsOrObject) {
-  if (!Array.isArray(rowsOrObject)) return rowsOrObject;
-  const rates = { TWD: 1 };
-  rowsOrObject.forEach(row => {
-    const currency = row.base_currency || row.currency;
-    const rate = Number(row.rate_to_twd || row.rate);
-    if (currency && rate) rates[currency] = rate;
-  });
-  return { ...exchangeRates, ...rates };
+    if (!Array.isArray(rowsOrObject)) return rowsOrObject;
+    const rates = { TWD: 1 };
+    rowsOrObject.forEach(row => {
+        const currency = row.base_currency || row.currency;
+        const rate = Number(row.rate_to_twd || row.rate);
+        if (currency && rate) rates[currency] = rate;
+    });
+    return { ...exchangeRates, ...rates };
 }
 
 function normalizeExpenses(rows, receiptRows = []) {
-  return rows.map(row => {
-    const category = categories.find(item => item.id === row.category_id || item.name === row.category_name);
-    const expenseId = row.expense_id || row.id || '';
-    const relatedReceipts = receiptRows.filter(item => (item.expense_id || '') === expenseId);
+    return rows.map(row => {
+        const category = categories.find(item => item.id === row.category_id || item.name === row.category_name);
+        const expenseId = row.expense_id || row.id || '';
+        const relatedReceipts = receiptRows.filter(item => (item.expense_id || '') === expenseId);
 
-    return {
-      id: expenseId,
-      title: row.title || row.expense_title || '未命名支出',
-      icon: category ? category.icon : '🧾',
-      payer: row.payer_member_name || row.payer || '',
-      category: row.category_name || (category ? category.name : ''),
-      payment: row.payment_method_name || row.payment || '',
-      date: row.expense_date || row.date || row.created_at || '',
-      currency: row.original_currency || row.currency || 'TWD',
-      amount: Number(row.amount_original || row.amount || 0),
-      rate: Number(row.exchange_rate_to_twd || row.rate || 1),
-      twd: Number(row.amount_twd || 0),
-      split: row.split_type || '平均分',
-      receiptUrls: dedupeReceiptUrls([...extractReceiptUrls(row), ...extractReceiptUrlsFromRows(relatedReceipts)]),
-      synced: true
-    };
-  });
+        return {
+            id: expenseId,
+            title: row.title || row.expense_title || '未命名支出',
+            icon: category ? category.icon : '🧾',
+            payer: row.payer_member_name || row.payer || '',
+            category: row.category_name || (category ? category.name : ''),
+            payment: row.payment_method_name || row.payment || '',
+            date: row.expense_date || row.date || row.created_at || '',
+            currency: row.original_currency || row.currency || 'TWD',
+            amount: Number(row.amount_original || row.amount || 0),
+            rate: Number(row.exchange_rate_to_twd || row.rate || 1),
+            twd: Number(row.amount_twd || 0),
+            split: row.split_type || '平均分',
+            receiptUrls: dedupeReceiptUrls([...extractReceiptUrls(row), ...extractReceiptUrlsFromRows(relatedReceipts)]),
+            synced: true
+        };
+    });
 }
 
 function normalizeExpenseReceipts(rows) {
-  if (!Array.isArray(rows)) return [];
-  return rows.map(row => ({
-    receipt_id: row.receipt_id || row.id || '',
-    expense_id: row.expense_id || '',
-    drive_url: row.drive_url || row.receipt_url || row.image_url || '',
-    drive_file_id: row.drive_file_id || ''
-  })).filter(item => item.expense_id);
+    if (!Array.isArray(rows)) return [];
+    return rows.map(row => ({
+        receipt_id: row.receipt_id || row.id || '',
+        expense_id: row.expense_id || '',
+        drive_url: row.drive_url || row.receipt_url || row.image_url || '',
+        drive_file_id: row.drive_file_id || ''
+    })).filter(item => item.expense_id);
 }
 
 function extractReceiptUrlsFromRows(rows) {
-  const urls = [];
-  rows.forEach(row => {
-    urls.push(...extractReceiptUrls(row));
-    if (row.drive_file_id && !row.drive_url && !row.receipt_url && !row.image_url) {
-      urls.push(`https://drive.google.com/file/d/${row.drive_file_id}/view`);
-    }
-  });
-  return dedupeReceiptUrls(urls);
+    const urls = [];
+    rows.forEach(row => {
+        urls.push(...extractReceiptUrls(row));
+        if (row.drive_file_id && !row.drive_url && !row.receipt_url && !row.image_url) {
+            urls.push(`https://drive.google.com/file/d/${row.drive_file_id}/view`);
+        }
+    });
+    return dedupeReceiptUrls(urls);
 }
 
 function dedupeReceiptUrls(urls) {
-  const map = new Map();
-  (urls || []).forEach((url) => {
-    const value = String(url || '').trim();
-    if (!value) return;
-    const driveId = extractDriveFileId(value);
-    const key = driveId ? `drive:${driveId}` : `url:${value}`;
-    if (!map.has(key)) map.set(key, value);
-  });
-  return Array.from(map.values());
+    const map = new Map();
+    (urls || []).forEach((url) => {
+        const value = String(url || '').trim();
+        if (!value) return;
+        const driveId = extractDriveFileId(value);
+        const key = driveId ? `drive:${driveId}` : `url:${value}`;
+        if (!map.has(key)) map.set(key, value);
+    });
+    return Array.from(map.values());
 }
 
 function extractReceiptUrls(row) {
-  const values = [];
-  const pushValue = (value) => {
-    if (typeof value !== 'string') return;
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    values.push(trimmed);
-  };
+    const values = [];
+    const pushValue = (value) => {
+        if (typeof value !== 'string') return;
+        const trimmed = value.trim();
+        if (!trimmed) return;
+        values.push(trimmed);
+    };
 
-  pushValue(row.drive_url);
-  pushValue(row.receipt_url);
-  pushValue(row.image_url);
+    pushValue(row.drive_url);
+    pushValue(row.receipt_url);
+    pushValue(row.image_url);
 
-  if (Array.isArray(row.receipts)) {
-    row.receipts.forEach(item => {
-      if (!item) return;
-      if (typeof item === 'string') {
-        pushValue(item);
-        return;
-      }
-      pushValue(item.drive_url);
-      pushValue(item.receipt_url);
-      pushValue(item.url);
-      pushValue(item.view_url);
-      pushValue(item.webViewLink);
-      pushValue(item.webContentLink);
-    });
-  }
-
-  const rawList = row.receipt_urls || row.drive_urls || row.image_urls;
-  if (Array.isArray(rawList)) {
-    rawList.forEach(pushValue);
-  } else if (typeof rawList === 'string') {
-    const maybeJson = rawList.trim();
-    if (maybeJson.startsWith('[') && maybeJson.endsWith(']')) {
-      try {
-        const parsed = JSON.parse(maybeJson);
-        if (Array.isArray(parsed)) parsed.forEach(pushValue);
-      } catch (_) {
-        maybeJson.split(',').map(item => item.trim()).forEach(pushValue);
-      }
-    } else {
-      maybeJson.split(',').map(item => item.trim()).forEach(pushValue);
+    if (Array.isArray(row.receipts)) {
+        row.receipts.forEach(item => {
+            if (!item) return;
+            if (typeof item === 'string') {
+                pushValue(item);
+                return;
+            }
+            pushValue(item.drive_url);
+            pushValue(item.receipt_url);
+            pushValue(item.url);
+            pushValue(item.view_url);
+            pushValue(item.webViewLink);
+            pushValue(item.webContentLink);
+        });
     }
-  }
 
-  return [...new Set(values)];
+    const rawList = row.receipt_urls || row.drive_urls || row.image_urls;
+    if (Array.isArray(rawList)) {
+        rawList.forEach(pushValue);
+    } else if (typeof rawList === 'string') {
+        const maybeJson = rawList.trim();
+        if (maybeJson.startsWith('[') && maybeJson.endsWith(']')) {
+            try {
+                const parsed = JSON.parse(maybeJson);
+                if (Array.isArray(parsed)) parsed.forEach(pushValue);
+            } catch (_) {
+                maybeJson.split(',').map(item => item.trim()).forEach(pushValue);
+            }
+        } else {
+            maybeJson.split(',').map(item => item.trim()).forEach(pushValue);
+        }
+    }
+
+    return [...new Set(values)];
 }
 
 function extractDriveFileId(url) {
-  const input = String(url || '');
-  const fileIdMatch = input.match(/\/file\/d\/([^/?#]+)/);
-  if (fileIdMatch && fileIdMatch[1]) return fileIdMatch[1];
+    const input = String(url || '');
+    const fileIdMatch = input.match(/\/file\/d\/([^/?#]+)/);
+    if (fileIdMatch && fileIdMatch[1]) return fileIdMatch[1];
 
-  const idMatch = input.match(/[?&]id=([^&#]+)/);
-  if (idMatch && idMatch[1]) return idMatch[1];
+    const idMatch = input.match(/[?&]id=([^&#]+)/);
+    if (idMatch && idMatch[1]) return idMatch[1];
 
-  return '';
+    return '';
 }
 
 function buildDriveImageCandidates(url) {
-  const original = String(url || '').trim();
-  if (!original) return [];
+    const original = String(url || '').trim();
+    if (!original) return [];
 
-  const fileId = extractDriveFileId(original);
-  if (!fileId) return [original];
+    const fileId = extractDriveFileId(original);
+    if (!fileId) return [original];
 
-  return [
-    `https://drive.google.com/uc?export=view&id=${fileId}`,
-    `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`,
-    `https://drive.usercontent.google.com/download?id=${fileId}&export=view`,
-    original
-  ];
+    return [
+        `https://drive.google.com/uc?export=view&id=${fileId}`,
+        `https://drive.google.com/thumbnail?id=${fileId}&sz=w2000`,
+        `https://drive.usercontent.google.com/download?id=${fileId}&export=view`,
+        original
+    ];
 }
 
 function toDisplayImageUrl(url) {
-  return buildDriveImageCandidates(url)[0] || String(url || '');
+    return buildDriveImageCandidates(url)[0] || String(url || '');
 }
 async function loadTrips() {
-  try {
-    const data = await jsonp('getTrips', {});
-    const rows = Array.isArray(data) ? data : data.trips || [];
-    if (rows.length) {
-      trips = rows.map(normalizeTrip).filter(trip => trip.id && trip.name);
+    try {
+        const data = await jsonp('getTrips', {});
+        const rows = Array.isArray(data) ? data : data.trips || [];
+        if (rows.length) {
+            trips = rows.map(normalizeTrip).filter(trip => trip.id && trip.name);
+        }
+    } catch (error) {
+        console.warn(error);
     }
-  } catch (error) {
-    console.warn(error);
-  }
 
-  if (shouldSelectLatestTripOnLoad) {
-    currentTripId = getLatestTripId() || currentTripId;
-    localStorage.setItem('tripsplit_current_trip_id', currentTripId);
-    localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'auto');
-    shouldSelectLatestTripOnLoad = false;
-  }
+    if (shouldSelectLatestTripOnLoad) {
+        currentTripId = getLatestTripId() || currentTripId;
+        localStorage.setItem('tripsplit_current_trip_id', currentTripId);
+        localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'auto');
+        shouldSelectLatestTripOnLoad = false;
+    }
 
-  if (!trips.some(trip => trip.id === currentTripId)) currentTripId = trips[0].id;
-  renderTripSelect();
-  loadArchivedTrips();
+    if (!trips.some(trip => trip.id === currentTripId)) currentTripId = trips[0].id;
+    renderTripSelect();
+    loadArchivedTrips();
 }
 
 function normalizeTrip(row) {
-  const id = row.trip_id || row.id;
-  return {
-    id,
-    name: row.trip_name || row.name,
-    baseCurrency: row.base_currency || 'TWD',
-    updatedAt: row.updated_at || row.updatedAt || row.modified_at || row.modifiedAt || row.last_modified || row.lastModified || row.created_at || row.createdAt || getStoredTripModifiedAt(id) || ''
-  };
+    const id = row.trip_id || row.id;
+    return {
+        id,
+        name: row.trip_name || row.name,
+        baseCurrency: row.base_currency || 'TWD',
+        updatedAt: row.updated_at || row.updatedAt || row.modified_at || row.modifiedAt || row.last_modified || row.lastModified || row.created_at || row.createdAt || getStoredTripModifiedAt(id) || ''
+    };
 }
 
 function getTripSortTime(trip) {
-  const updatedTime = Date.parse(trip.updatedAt || '');
-  if (Number.isFinite(updatedTime)) return updatedTime;
+    const updatedTime = Date.parse(trip.updatedAt || '');
+    if (Number.isFinite(updatedTime)) return updatedTime;
 
-  const idTimestamp = Number(String(trip.id || '').replace(/^trip_/, ''));
-  return Number.isFinite(idTimestamp) ? idTimestamp : 0;
+    const idTimestamp = Number(String(trip.id || '').replace(/^trip_/, ''));
+    return Number.isFinite(idTimestamp) ? idTimestamp : 0;
 }
 
 function getLatestTripId() {
-  if (!trips.length) return '';
+    if (!trips.length) return '';
 
-  return [...trips].sort((a, b) => {
-    const timeDiff = getTripSortTime(b) - getTripSortTime(a);
-    if (timeDiff) return timeDiff;
-    return trips.indexOf(b) - trips.indexOf(a);
-  })[0].id;
+    return [...trips].sort((a, b) => {
+        const timeDiff = getTripSortTime(b) - getTripSortTime(a);
+        if (timeDiff) return timeDiff;
+        return trips.indexOf(b) - trips.indexOf(a);
+    })[0].id;
 }
 
 async function loadArchivedTrips() {
-  try {
-    const data = await jsonp('getArchivedTrips', {});
-    const rows = Array.isArray(data) ? data : data.archivedTrips || [];
-    if (rows.length) {
-      archivedTrips = rows.map(row => ({
-        id: row.trip_id || row.id,
-        name: row.trip_name || row.name,
-        baseCurrency: row.base_currency || 'TWD'
-      })).filter(trip => trip.id && trip.name);
-    } else {
-      archivedTrips = [];
+    try {
+        const data = await jsonp('getArchivedTrips', {});
+        const rows = Array.isArray(data) ? data : data.archivedTrips || [];
+        if (rows.length) {
+            archivedTrips = rows.map(row => ({
+                id: row.trip_id || row.id,
+                name: row.trip_name || row.name,
+                baseCurrency: row.base_currency || 'TWD'
+            })).filter(trip => trip.id && trip.name);
+        } else {
+            archivedTrips = [];
+        }
+    } catch (error) {
+        console.warn(error);
+        archivedTrips = [];
     }
-  } catch (error) {
-    console.warn(error);
-    archivedTrips = [];
-  }
 
-  renderArchivedTrips();
+    renderArchivedTrips();
 }
 
 async function loadCurrentTripData() {
-  setStatus(`正在讀取「${currentTrip().name}」資料...`);
-  try {
-    const data = await jsonp('getInitialData', { trip_id: currentTripId });
-    applyLoadedData(data);
-    setStatus(`已切換到「${currentTrip().name}」。`, 'success');
-  } catch (error) {
-    console.warn(error);
-    applyFallbackData();
-    const blockedByClient = error && error.code === 'GAS_JSONP_LOAD';
-    if (blockedByClient) {
-      setStatus(`已切換到「${currentTrip().name}」；GAS 請求被瀏覽器或外掛阻擋，已改用本機預覽資料。`, 'error');
-    } else {
-      setStatus(`已切換到「${currentTrip().name}」；目前使用本機預覽資料。`, 'info');
+    setStatus(`正在讀取「${currentTrip().name}」資料...`);
+    try {
+        const data = await jsonp('getInitialData', { trip_id: currentTripId });
+        applyLoadedData(data);
+        setStatus(`已切換到「${currentTrip().name}」。`, 'success');
+    } catch (error) {
+        console.warn(error);
+        applyFallbackData();
+        const blockedByClient = error && error.code === 'GAS_JSONP_LOAD';
+        if (blockedByClient) {
+            setStatus(`已切換到「${currentTrip().name}」；GAS 請求被瀏覽器或外掛阻擋，已改用本機預覽資料。`, 'error');
+        } else {
+            setStatus(`已切換到「${currentTrip().name}」；目前使用本機預覽資料。`, 'info');
+        }
     }
-  }
-  renderAll();
-  updateFormDisabledState();
+    renderAll();
+    updateFormDisabledState();
 }
 
 function applyLoadedData(data) {
-  members = normalizeMembers(data.members || []);
-  categories = normalizeCategories(data.categories || []);
-  paymentMethods = normalizePaymentMethods(data.paymentMethods || data.payment_methods || []);
-  exchangeRates = normalizeRates(data.exchangeRates || data.exchange_rates || exchangeRates);
-  expenseReceipts = normalizeExpenseReceipts(data.expenseReceipts || data.expense_receipts || []);
-  expenses = normalizeExpenses(data.expenses || [], expenseReceipts);
+    members = normalizeMembers(data.members || []);
+    categories = normalizeCategories(data.categories || []);
+    paymentMethods = normalizePaymentMethods(data.paymentMethods || data.payment_methods || []);
+    exchangeRates = normalizeRates(data.exchangeRates || data.exchange_rates || exchangeRates);
+    expenseReceipts = normalizeExpenseReceipts(data.expenseReceipts || data.expense_receipts || []);
+    expenses = normalizeExpenses(data.expenses || [], expenseReceipts);
 
-  // 只有在 fallback 中有對應 trip 且 GAS 沒回傳資料時才使用 fallback
-  if ((!members.length || !categories.length || !paymentMethods.length) && fallbackDataByTrip[currentTripId]) {
-    applyFallbackData({ keepExpenses: Boolean(expenses.length) });
-  }
+    // 只有在 fallback 中有對應 trip 且 GAS 沒回傳資料時才使用 fallback
+    if ((!members.length || !categories.length || !paymentMethods.length) && fallbackDataByTrip[currentTripId]) {
+        applyFallbackData({ keepExpenses: Boolean(expenses.length) });
+    }
 }
 
 function applyFallbackData(options = {}) {
-  const fallback = fallbackDataByTrip[currentTripId];
-  if (!fallback) return;
-  if (!members.length) members = fallback.members;
-  if (!categories.length) categories = fallback.categories;
-  if (!paymentMethods.length) paymentMethods = fallback.paymentMethods;
-  if (!options.keepExpenses && !expenses.length) expenses = fallback.expenses;
+    const fallback = fallbackDataByTrip[currentTripId];
+    if (!fallback) return;
+    if (!members.length) members = fallback.members;
+    if (!categories.length) categories = fallback.categories;
+    if (!paymentMethods.length) paymentMethods = fallback.paymentMethods;
+    if (!options.keepExpenses && !expenses.length) expenses = fallback.expenses;
 }
 function buildReceiptLinks(expense) {
-  const urls = Array.isArray(expense.receiptUrls) ? expense.receiptUrls : [];
-  if (!urls.length) return '';
+    const urls = Array.isArray(expense.receiptUrls) ? expense.receiptUrls : [];
+    if (!urls.length) return '';
 
-  return `<div class="expense-links">${urls.map((url, index) => `
+    return `<div class="expense-links">${urls.map((url, index) => `
     <button class="receipt-link" type="button" data-receipt-url="${encodeURIComponent(url)}">📷 查看照片${urls.length > 1 ? ` ${index + 1}` : ''}</button>
   `).join('')}</div>`;
 }
@@ -577,173 +577,173 @@ async function saveThenReload(action, payload, delay = 900) {
     }
 }
 function computeMemberBalances() {
-  const names = members.map(member => member.name);
-  const balances = {};
-  names.forEach(name => {
-    balances[name] = 0;
-  });
-
-  expenses.forEach(expense => {
-    const payer = expense.payer;
-    const amountTwd = Number(expense.twd || 0);
-    if (!amountTwd || !names.length) return;
-
-    if (balances[payer] === undefined) balances[payer] = 0;
-    balances[payer] += amountTwd;
-
-    const share = amountTwd / names.length;
+    const names = members.map(member => member.name);
+    const balances = {};
     names.forEach(name => {
-      balances[name] = (balances[name] || 0) - share;
+        balances[name] = 0;
     });
-  });
 
-  return names.map(name => ({
-    name,
-    balance: Math.round(balances[name] || 0)
-  }));
+    expenses.forEach(expense => {
+        const payer = expense.payer;
+        const amountTwd = Number(expense.twd || 0);
+        if (!amountTwd || !names.length) return;
+
+        if (balances[payer] === undefined) balances[payer] = 0;
+        balances[payer] += amountTwd;
+
+        const share = amountTwd / names.length;
+        names.forEach(name => {
+            balances[name] = (balances[name] || 0) - share;
+        });
+    });
+
+    return names.map(name => ({
+        name,
+        balance: Math.round(balances[name] || 0)
+    }));
 }
 
 function buildSettlementSuggestions(balanceRows) {
-  const creditors = balanceRows
-    .filter(item => item.balance > 0)
-    .map(item => ({ name: item.name, amount: item.balance }))
-    .sort((a, b) => b.amount - a.amount);
-  const debtors = balanceRows
-    .filter(item => item.balance < 0)
-    .map(item => ({ name: item.name, amount: Math.abs(item.balance) }))
-    .sort((a, b) => b.amount - a.amount);
+    const creditors = balanceRows
+        .filter(item => item.balance > 0)
+        .map(item => ({ name: item.name, amount: item.balance }))
+        .sort((a, b) => b.amount - a.amount);
+    const debtors = balanceRows
+        .filter(item => item.balance < 0)
+        .map(item => ({ name: item.name, amount: Math.abs(item.balance) }))
+        .sort((a, b) => b.amount - a.amount);
 
-  const suggestions = [];
-  let creditorIndex = 0;
-  let debtorIndex = 0;
+    const suggestions = [];
+    let creditorIndex = 0;
+    let debtorIndex = 0;
 
-  while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
-    const creditor = creditors[creditorIndex];
-    const debtor = debtors[debtorIndex];
-    const amount = Math.min(creditor.amount, debtor.amount);
+    while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
+        const creditor = creditors[creditorIndex];
+        const debtor = debtors[debtorIndex];
+        const amount = Math.min(creditor.amount, debtor.amount);
 
-    if (amount > 0) {
-      suggestions.push({ from: debtor.name, to: creditor.name, amount: Math.round(amount) });
-      creditor.amount -= amount;
-      debtor.amount -= amount;
+        if (amount > 0) {
+            suggestions.push({ from: debtor.name, to: creditor.name, amount: Math.round(amount) });
+            creditor.amount -= amount;
+            debtor.amount -= amount;
+        }
+
+        if (creditor.amount <= 0.5) creditorIndex += 1;
+        if (debtor.amount <= 0.5) debtorIndex += 1;
     }
 
-    if (creditor.amount <= 0.5) creditorIndex += 1;
-    if (debtor.amount <= 0.5) debtorIndex += 1;
-  }
-
-  return suggestions;
+    return suggestions;
 }
 
 function renderBalancesAndSettlements() {
-  const balanceRows = computeMemberBalances();
-  const balanceGrid = $('#balance-grid');
-  const settlementList = $('#settlement-list');
-  if (!balanceGrid || !settlementList) return;
+    const balanceRows = computeMemberBalances();
+    const balanceGrid = $('#balance-grid');
+    const settlementList = $('#settlement-list');
+    if (!balanceGrid || !settlementList) return;
 
-  const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
-  const avg = members.length ? Math.round(total / members.length) : 0;
+    const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
+    const avg = members.length ? Math.round(total / members.length) : 0;
 
-  const memberCards = balanceRows.map(item => {
-    const sign = item.balance >= 0 ? '+' : '-';
-    const amount = money.format(Math.abs(item.balance));
-    const className = item.balance > 0 ? 'positive' : item.balance < 0 ? 'negative' : 'neutral';
-    return `<div class="balance-card"><span>${item.name}</span><strong class="${className}">${sign} NT$ ${amount}</strong></div>`;
-  }).join('');
+    const memberCards = balanceRows.map(item => {
+        const sign = item.balance >= 0 ? '+' : '-';
+        const amount = money.format(Math.abs(item.balance));
+        const className = item.balance > 0 ? 'positive' : item.balance < 0 ? 'negative' : 'neutral';
+        return `<div class="balance-card"><span>${item.name}</span><strong class="${className}">${sign} NT$ ${amount}</strong></div>`;
+    }).join('');
 
-  balanceGrid.innerHTML = memberCards
-    + `<div class="balance-card"><span>已記錄支出</span><strong class="neutral">${expenses.length} 筆</strong></div>`
-    + `<div class="balance-card"><span>平均每人</span><strong class="neutral">NT$ ${money.format(avg)}</strong></div>`;
+    balanceGrid.innerHTML = memberCards
+        + `<div class="balance-card"><span>已記錄支出</span><strong class="neutral">${expenses.length} 筆</strong></div>`
+        + `<div class="balance-card"><span>平均每人</span><strong class="neutral">NT$ ${money.format(avg)}</strong></div>`;
 
-  const suggestions = buildSettlementSuggestions(balanceRows);
-  settlementList.innerHTML = suggestions.length
-    ? suggestions.map(item => `<div class="settlement-item"><div class="settlement-route"><span>${item.from}</span><span class="arrow">→</span><span>${item.to}</span></div><strong>NT$ ${money.format(item.amount)}</strong></div>`).join('')
-    : '<p class="field-hint">目前已接近平衡，暫無建議轉帳。</p>';
+    const suggestions = buildSettlementSuggestions(balanceRows);
+    settlementList.innerHTML = suggestions.length
+        ? suggestions.map(item => `<div class="settlement-item"><div class="settlement-route"><span>${item.from}</span><span class="arrow">→</span><span>${item.to}</span></div><strong>NT$ ${money.format(item.amount)}</strong></div>`).join('')
+        : '<p class="field-hint">目前已接近平衡，暫無建議轉帳。</p>';
 }
 
 function updateExchangePreview() {
-  const currency = $('#expense-currency').value;
-  const amount = Number($('#amount-original').value || 0);
-  const rate = Number(exchangeRates[currency] || 1);
-  $('#rate-preview').value = `${currency} → TWD：${rate}`;
-  $('#amount-twd').value = amount ? `NT$ ${money.format(Math.round(amount * rate))}` : '輸入金額後自動換算';
+    const currency = $('#expense-currency').value;
+    const amount = Number($('#amount-original').value || 0);
+    const rate = Number(exchangeRates[currency] || 1);
+    $('#rate-preview').value = `${currency} → TWD：${rate}`;
+    $('#amount-twd').value = amount ? `NT$ ${money.format(Math.round(amount * rate))}` : '輸入金額後自動換算';
 }
 
 function getSelectedParticipants() {
-  return Array.from(document.querySelectorAll('#participant-options input:checked')).map(input => input.value);
+    return Array.from(document.querySelectorAll('#participant-options input:checked')).map(input => input.value);
 }
 
 function distributeIntegerPercent(count) {
-  if (!count) return [];
-  const base = Math.floor(100 / count);
-  let remainder = 100 - (base * count);
+    if (!count) return [];
+    const base = Math.floor(100 / count);
+    let remainder = 100 - (base * count);
 
-  return Array.from({ length: count }, () => {
-    const value = base + (remainder > 0 ? 1 : 0);
-    remainder -= 1;
-    return value;
-  });
+    return Array.from({ length: count }, () => {
+        const value = base + (remainder > 0 ? 1 : 0);
+        remainder -= 1;
+        return value;
+    });
 }
 
 function distributeAmount(totalAmount, count) {
-  if (!count) return [];
-  const roundedTotal = Math.round(Number(totalAmount || 0) * 100) / 100;
-  const base = Math.floor((roundedTotal / count) * 100) / 100;
-  let remaining = roundedTotal;
+    if (!count) return [];
+    const roundedTotal = Math.round(Number(totalAmount || 0) * 100) / 100;
+    const base = Math.floor((roundedTotal / count) * 100) / 100;
+    let remaining = roundedTotal;
 
-  return Array.from({ length: count }, (_, index) => {
-    const value = index === count - 1 ? remaining : base;
-    remaining = Math.round((remaining - value) * 100) / 100;
-    return Math.round(value * 100) / 100;
-  });
+    return Array.from({ length: count }, (_, index) => {
+        const value = index === count - 1 ? remaining : base;
+        remaining = Math.round((remaining - value) * 100) / 100;
+        return Math.round(value * 100) / 100;
+    });
 }
 
 function formatAmountValue(value) {
-  const number = Number(value || 0);
-  return Number.isInteger(number) ? String(number) : number.toFixed(2);
+    const number = Number(value || 0);
+    return Number.isInteger(number) ? String(number) : number.toFixed(2);
 }
 
 function updateSplitSummary() {
-  const summary = $('#split-summary');
-  if (!summary) return;
+    const summary = $('#split-summary');
+    if (!summary) return;
 
-  const inputs = Array.from(document.querySelectorAll('#split-config .split-input'));
-  const kind = inputs[0]?.dataset.kind || '';
-  const total = inputs.reduce((sum, input) => sum + Number(input.value || 0), 0);
+    const inputs = Array.from(document.querySelectorAll('#split-config .split-input'));
+    const kind = inputs[0]?.dataset.kind || '';
+    const total = inputs.reduce((sum, input) => sum + Number(input.value || 0), 0);
 
-  if (kind === 'percent') {
-    const diff = Math.round((100 - total) * 100) / 100;
-    summary.textContent = `目前合計 ${formatAmountValue(total)}%，${diff === 0 ? '剛好 100%' : diff > 0 ? `還差 ${formatAmountValue(diff)}%` : `多出 ${formatAmountValue(Math.abs(diff))}%`}。`;
-    return;
-  }
+    if (kind === 'percent') {
+        const diff = Math.round((100 - total) * 100) / 100;
+        summary.textContent = `目前合計 ${formatAmountValue(total)}%，${diff === 0 ? '剛好 100%' : diff > 0 ? `還差 ${formatAmountValue(diff)}%` : `多出 ${formatAmountValue(Math.abs(diff))}%`}。`;
+        return;
+    }
 
-  if (kind === 'amount') {
-    const target = Number($('#amount-original').value || 0);
-    const diff = Math.round((target - total) * 100) / 100;
-    summary.textContent = `目前合計 ${formatAmountValue(total)}，${diff === 0 ? '剛好等於原始金額' : diff > 0 ? `還差 ${formatAmountValue(diff)}` : `多出 ${formatAmountValue(Math.abs(diff))}`}。`;
-  }
+    if (kind === 'amount') {
+        const target = Number($('#amount-original').value || 0);
+        const diff = Math.round((target - total) * 100) / 100;
+        summary.textContent = `目前合計 ${formatAmountValue(total)}，${diff === 0 ? '剛好等於原始金額' : diff > 0 ? `還差 ${formatAmountValue(diff)}` : `多出 ${formatAmountValue(Math.abs(diff))}`}。`;
+    }
 }
 
 function renderSplitConfig() {
-  const splitType = document.querySelector('input[name="split_type"]:checked')?.value || '平均分';
-  const selected = getSelectedParticipants();
-  const container = $('#split-config');
-  if (!container) return;
+    const splitType = document.querySelector('input[name="split_type"]:checked')?.value || '平均分';
+    const selected = getSelectedParticipants();
+    const container = $('#split-config');
+    if (!container) return;
 
-  if (!selected.length || splitType === '平均分') {
-    container.innerHTML = '';
-    container.style.display = 'none';
-    return;
-  }
+    if (!selected.length || splitType === '平均分') {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        return;
+    }
 
-  const isPercent = splitType === '百分比分';
-  const kind = isPercent ? 'percent' : 'amount';
-  const defaultValues = isPercent
-    ? distributeIntegerPercent(selected.length)
-    : distributeAmount(Number($('#amount-original').value || 0), selected.length);
+    const isPercent = splitType === '百分比分';
+    const kind = isPercent ? 'percent' : 'amount';
+    const defaultValues = isPercent
+        ? distributeIntegerPercent(selected.length)
+        : distributeAmount(Number($('#amount-original').value || 0), selected.length);
 
-  container.style.display = 'grid';
-  container.innerHTML = `
+    container.style.display = 'grid';
+    container.innerHTML = `
     <label>${isPercent ? '請輸入每位比例（%）' : '請輸入每位金額（原始幣別）'}</label>
     <div class="split-input-grid">
       ${selected.map((name, index) => `
@@ -764,123 +764,123 @@ function renderSplitConfig() {
     </div>
     <p class="field-hint" id="split-summary"></p>
   `;
-  updateSplitSummary();
+    updateSplitSummary();
 }
 
 function validateSplitInputs(splitType, totalAmount) {
-  const selected = getSelectedParticipants();
-  if (!selected.length) {
-    alert('請至少勾選一位分帳對象。');
-    return { ok: false };
-  }
+    const selected = getSelectedParticipants();
+    if (!selected.length) {
+        alert('請至少勾選一位分帳對象。');
+        return { ok: false };
+    }
 
-  if (splitType === '平均分') {
-    return {
-      ok: true,
-      splitDetails: selected.map(memberName => ({ member_name: memberName, split_mode: 'equal' }))
-    };
-  }
+    if (splitType === '平均分') {
+        return {
+            ok: true,
+            splitDetails: selected.map(memberName => ({ member_name: memberName, split_mode: 'equal' }))
+        };
+    }
 
-  const inputs = Array.from(document.querySelectorAll('#split-config .split-input'));
-  if (!inputs.length || inputs.length !== selected.length) {
-    alert('請先輸入分帳資料。');
-    return { ok: false };
-  }
+    const inputs = Array.from(document.querySelectorAll('#split-config .split-input'));
+    if (!inputs.length || inputs.length !== selected.length) {
+        alert('請先輸入分帳資料。');
+        return { ok: false };
+    }
 
-  const splitDetails = [];
-  for (const input of inputs) {
-    const value = Number(input.value);
-    if (!(value >= 0)) {
-      alert(`請輸入 ${input.dataset.member} 的分帳數值。`);
-      input.focus();
-      return { ok: false };
+    const splitDetails = [];
+    for (const input of inputs) {
+        const value = Number(input.value);
+        if (!(value >= 0)) {
+            alert(`請輸入 ${input.dataset.member} 的分帳數值。`);
+            input.focus();
+            return { ok: false };
+        }
+
+        if (splitType === '百分比分') {
+            splitDetails.push({
+                member_name: input.dataset.member,
+                split_mode: 'percent',
+                share_percentage: value
+            });
+            continue;
+        }
+
+        splitDetails.push({
+            member_name: input.dataset.member,
+            split_mode: 'amount',
+            share_amount_original: value
+        });
     }
 
     if (splitType === '百分比分') {
-      splitDetails.push({
-        member_name: input.dataset.member,
-        split_mode: 'percent',
-        share_percentage: value
-      });
-      continue;
+        const totalPercent = splitDetails.reduce((sum, item) => sum + Number(item.share_percentage || 0), 0);
+        if (Math.abs(totalPercent - 100) > 0.01) {
+            alert(`百分比加總需為 100%，目前為 ${totalPercent.toFixed(2)}%。`);
+            return { ok: false };
+        }
     }
 
-    splitDetails.push({
-      member_name: input.dataset.member,
-      split_mode: 'amount',
-      share_amount_original: value
-    });
-  }
-
-  if (splitType === '百分比分') {
-    const totalPercent = splitDetails.reduce((sum, item) => sum + Number(item.share_percentage || 0), 0);
-    if (Math.abs(totalPercent - 100) > 0.01) {
-      alert(`百分比加總需為 100%，目前為 ${totalPercent.toFixed(2)}%。`);
-      return { ok: false };
+    if (splitType === '自訂金額') {
+        const totalSplitAmount = splitDetails.reduce((sum, item) => sum + Number(item.share_amount_original || 0), 0);
+        if (Math.abs(totalSplitAmount - totalAmount) > 1) {
+            alert(`自訂金額加總建議接近原始金額，現在加總為 ${totalSplitAmount.toFixed(2)}。`);
+        }
     }
-  }
 
-  if (splitType === '自訂金額') {
-    const totalSplitAmount = splitDetails.reduce((sum, item) => sum + Number(item.share_amount_original || 0), 0);
-    if (Math.abs(totalSplitAmount - totalAmount) > 1) {
-      alert(`自訂金額加總建議接近原始金額，現在加總為 ${totalSplitAmount.toFixed(2)}。`);
-    }
-  }
-
-  return { ok: true, splitDetails };
+    return { ok: true, splitDetails };
 }
 function handleReceiptImageError(event) {
-  const image = event.target;
-  const candidates = JSON.parse(image.dataset.candidates || '[]');
-  const currentIndex = Number(image.dataset.candidateIndex || 0);
-  const nextIndex = currentIndex + 1;
+    const image = event.target;
+    const candidates = JSON.parse(image.dataset.candidates || '[]');
+    const currentIndex = Number(image.dataset.candidateIndex || 0);
+    const nextIndex = currentIndex + 1;
 
-  if (nextIndex >= candidates.length) {
-    image.onerror = null;
-    return;
-  }
+    if (nextIndex >= candidates.length) {
+        image.onerror = null;
+        return;
+    }
 
-  image.dataset.candidateIndex = String(nextIndex);
-  image.src = candidates[nextIndex];
+    image.dataset.candidateIndex = String(nextIndex);
+    image.src = candidates[nextIndex];
 }
 
 function openReceiptModal(rawUrl) {
-  const modal = $('#receipt-modal');
-  const image = $('#receipt-modal-image');
-  const link = $('#receipt-modal-open-link');
-  if (!modal || !image || !link) return;
+    const modal = $('#receipt-modal');
+    const image = $('#receipt-modal-image');
+    const link = $('#receipt-modal-open-link');
+    if (!modal || !image || !link) return;
 
-  const originalUrl = String(rawUrl || '').trim();
-  if (!originalUrl) return;
+    const originalUrl = String(rawUrl || '').trim();
+    if (!originalUrl) return;
 
-  const candidates = buildDriveImageCandidates(originalUrl);
-  if (!candidates.length) return;
+    const candidates = buildDriveImageCandidates(originalUrl);
+    if (!candidates.length) return;
 
-  image.dataset.candidates = JSON.stringify(candidates);
-  image.dataset.candidateIndex = '0';
-  image.onerror = handleReceiptImageError;
-  image.src = candidates[0];
-  image.alt = '收據照片預覽';
-  link.href = originalUrl;
-  modal.classList.add('show');
-  modal.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
+    image.dataset.candidates = JSON.stringify(candidates);
+    image.dataset.candidateIndex = '0';
+    image.onerror = handleReceiptImageError;
+    image.src = candidates[0];
+    image.alt = '收據照片預覽';
+    link.href = originalUrl;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
 }
 
 function closeReceiptModal() {
-  const modal = $('#receipt-modal');
-  const image = $('#receipt-modal-image');
-  const link = $('#receipt-modal-open-link');
-  if (!modal || !image || !link) return;
+    const modal = $('#receipt-modal');
+    const image = $('#receipt-modal-image');
+    const link = $('#receipt-modal-open-link');
+    if (!modal || !image || !link) return;
 
-  modal.classList.remove('show');
-  modal.setAttribute('aria-hidden', 'true');
-  image.src = '';
-  image.onerror = null;
-  image.dataset.candidates = '[]';
-  image.dataset.candidateIndex = '0';
-  link.href = '#';
-  document.body.style.overflow = '';
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    image.src = '';
+    image.onerror = null;
+    image.dataset.candidates = '[]';
+    image.dataset.candidateIndex = '0';
+    link.href = '#';
+    document.body.style.overflow = '';
 }
 
 async function fileToBase64(file) {
@@ -958,66 +958,66 @@ function compressImageFile(file, options = {}) {
 }
 
 function renderReceiptPreview() {
-  const preview = $('#receipt-preview');
-  if (!preview) return;
+    const preview = $('#receipt-preview');
+    if (!preview) return;
 
-  preview.innerHTML = '';
-  selectedReceiptFiles.forEach((file, index) => {
-    const item = document.createElement('div');
-    item.className = 'receipt-preview-item';
+    preview.innerHTML = '';
+    selectedReceiptFiles.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'receipt-preview-item';
 
-    const img = document.createElement('img');
-    const objectUrl = URL.createObjectURL(file);
-    img.src = objectUrl;
-    img.alt = file.name;
-    img.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
+        const img = document.createElement('img');
+        const objectUrl = URL.createObjectURL(file);
+        img.src = objectUrl;
+        img.alt = file.name;
+        img.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
 
-    const removeButton = document.createElement('button');
-    removeButton.type = 'button';
-    removeButton.className = 'receipt-preview-remove';
-    removeButton.dataset.removePreviewIndex = String(index);
-    removeButton.setAttribute('aria-label', `移除 ${file.name}`);
-    removeButton.textContent = '×';
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'receipt-preview-remove';
+        removeButton.dataset.removePreviewIndex = String(index);
+        removeButton.setAttribute('aria-label', `移除 ${file.name}`);
+        removeButton.textContent = '×';
 
-    item.appendChild(img);
-    item.appendChild(removeButton);
-    preview.appendChild(item);
-  });
+        item.appendChild(img);
+        item.appendChild(removeButton);
+        preview.appendChild(item);
+    });
 
-  preview.style.display = selectedReceiptFiles.length ? 'flex' : 'none';
+    preview.style.display = selectedReceiptFiles.length ? 'flex' : 'none';
 }
 
 function appendReceiptFiles(files) {
-  const imageFiles = Array.from(files || []).filter(file => file.type.startsWith('image/'));
-  if (!imageFiles.length) return;
+    const imageFiles = Array.from(files || []).filter(file => file.type.startsWith('image/'));
+    if (!imageFiles.length) return;
 
-  const remain = Math.max(0, MAX_RECEIPT_FILES - selectedReceiptFiles.length);
-  if (!remain) {
-    alert(`最多只能上傳 ${MAX_RECEIPT_FILES} 張收據照片。`);
-    return;
-  }
+    const remain = Math.max(0, MAX_RECEIPT_FILES - selectedReceiptFiles.length);
+    if (!remain) {
+        alert(`最多只能上傳 ${MAX_RECEIPT_FILES} 張收據照片。`);
+        return;
+    }
 
-  const accepted = imageFiles.slice(0, remain);
-  selectedReceiptFiles = selectedReceiptFiles.concat(accepted);
+    const accepted = imageFiles.slice(0, remain);
+    selectedReceiptFiles = selectedReceiptFiles.concat(accepted);
 
-  if (imageFiles.length > remain) {
-    alert(`最多只能上傳 ${MAX_RECEIPT_FILES} 張收據照片，已保留前 ${MAX_RECEIPT_FILES} 張。`);
-  }
+    if (imageFiles.length > remain) {
+        alert(`最多只能上傳 ${MAX_RECEIPT_FILES} 張收據照片，已保留前 ${MAX_RECEIPT_FILES} 張。`);
+    }
 
-  renderReceiptPreview();
+    renderReceiptPreview();
 }
 
 function removeReceiptFileAt(index) {
-  if (!(index >= 0) || index >= selectedReceiptFiles.length) return;
-  selectedReceiptFiles.splice(index, 1);
-  renderReceiptPreview();
+    if (!(index >= 0) || index >= selectedReceiptFiles.length) return;
+    selectedReceiptFiles.splice(index, 1);
+    renderReceiptPreview();
 }
 
 function clearReceiptFiles() {
-  selectedReceiptFiles = [];
-  renderReceiptPreview();
-  if ($('#receipt-files')) $('#receipt-files').value = '';
-  if ($('#receipt-camera-files')) $('#receipt-camera-files').value = '';
+    selectedReceiptFiles = [];
+    renderReceiptPreview();
+    if ($('#receipt-files')) $('#receipt-files').value = '';
+    if ($('#receipt-camera-files')) $('#receipt-camera-files').value = '';
 }
 
 async function getReceiptPayloads() {
@@ -1027,82 +1027,83 @@ async function getReceiptPayloads() {
 let expenseSearchTerm = '';
 
 function safeSetText(selector, value) {
-  const node = $(selector);
-  if (node) node.textContent = value;
+    const node = $(selector);
+    if (node) node.textContent = value;
 }
 
 function safeSetHtml(selector, value) {
-  const node = $(selector);
-  if (node) node.innerHTML = value;
+    const node = $(selector);
+    if (node) node.innerHTML = value;
 }
 
 function renderAll() {
-  renderTripSelect();
-  renderArchivedTrips();
-  renderTripHeaders();
-  renderRates();
-  renderMembers();
-  renderList(categories, '#category-list', 'category');
-  renderList(paymentMethods, '#payment-list', 'payment');
-  renderSelects();
-  renderExpenses();
-  renderBalancesAndSettlements();
-  if (typeof renderExpenseChart === 'function') renderExpenseChart();
-  if (typeof renderBudgetChart === 'function') renderBudgetChart();
-  if ($('#expense-currency') && $('#amount-original')) updateExchangePreview();
+    renderTripSelect();
+    renderArchivedTrips();
+    renderTripHeaders();
+    renderRates();
+    renderMembers();
+    renderList(categories, '#category-list', 'category');
+    renderList(paymentMethods, '#payment-list', 'payment');
+    renderSelects();
+    renderExpenses();
+    renderBalancesAndSettlements();
+    if (typeof renderExpenseChart === 'function') renderExpenseChart();
+    if (typeof renderBudgetChart === 'function') renderBudgetChart();
+    if ($('#expense-currency') && $('#amount-original')) updateExchangePreview();
 }
 
 function isCurrentTripArchived() {
-  const currentTrip_ = currentTrip();
-  return archivedTrips && archivedTrips.some(trip => trip.id === currentTrip_.id);
+    const currentTrip_ = currentTrip();
+    return archivedTrips && archivedTrips.some(trip => trip.id === currentTrip_.id);
 }
 
 function updateFormDisabledState() {
-  const isArchived = isCurrentTripArchived();
-  const forms = ['#member-form', '#category-form', '#payment-form', '#expense-create-form'];
+    const isArchived = isCurrentTripArchived();
+    const forms = ['#member-form', '#category-form', '#payment-form', '#expense-create-form'];
 
-  forms.forEach(formSelector => {
-    const form = $(formSelector);
-    if (!form) return;
-    const inputs = form.querySelectorAll('input, select, textarea, button[type="submit"]');
-    inputs.forEach(input => { input.disabled = isArchived; });
-  });
+    forms.forEach(formSelector => {
+        const form = $(formSelector);
+        if (!form) return;
+        const inputs = form.querySelectorAll('input, select, textarea, button[type="submit"]');
+        inputs.forEach(input => { input.disabled = isArchived; });
+    });
 
-  const archiveBtn = $('#archive-trip-btn');
-  if (archiveBtn) {
-    archiveBtn.disabled = isArchived;
-    archiveBtn.title = isArchived ? '此旅遊已封存' : '封存目前旅遊';
-  }
+    const archiveBtn = $('#archive-trip-btn');
+    if (archiveBtn) {
+        archiveBtn.disabled = isArchived;
+        archiveBtn.title = isArchived ? '此旅遊已封存' : '封存目前旅遊';
+    }
 
-  if (isArchived) setStatus('已封存的旅遊不能修改。若要編輯，請先解除封存。', 'info');
+    if (isArchived) setStatus('已封存的旅遊不能修改。若要編輯，請先解除封存。', 'info');
 }
 
 function renderTripSelect() {
-  const select = $('#trip-select');
-  if (!select) return;
+    const select = $('#trip-select');
+    if (!select) return;
 
-  const sortedTrips = [...trips].sort((a, b) => {
-    const aTimestamp = getTripSortTime(a);
-    const bTimestamp = getTripSortTime(b);
-    if (aTimestamp && bTimestamp) return aTimestamp - bTimestamp;
-    if (aTimestamp && !bTimestamp) return 1;
-    if (!aTimestamp && bTimestamp) return -1;
-    return trips.indexOf(a) - trips.indexOf(b);
-  });
+    const sortedTrips = [...trips].sort((a, b) => {
+        const aTimestamp = getTripSortTime(a);
+        const bTimestamp = getTripSortTime(b);
+        if (aTimestamp && bTimestamp) return aTimestamp - bTimestamp;
+        if (aTimestamp && !bTimestamp) return 1;
+        if (!aTimestamp && bTimestamp) return -1;
+        return trips.indexOf(a) - trips.indexOf(b);
+    });
 
-  select.innerHTML = sortedTrips.map(trip => `<option value="${trip.id}" ${trip.id === currentTripId ? 'selected' : ''}>${trip.name}</option>`).join('');
+    select.innerHTML = sortedTrips.map(trip => `<option value="${trip.id}" ${trip.id === currentTripId ? 'selected' : ''}>${trip.name}</option>`).join('');
+    syncIconSelect(select);
 }
 
 function renderArchivedTrips() {
-  const container = $('#archived-trips-list');
-  if (!container) return;
+    const container = $('#archived-trips-list');
+    if (!container) return;
 
-  if (!archivedTrips || !archivedTrips.length) {
-    container.innerHTML = '<p class="field-hint">目前沒有已封存的旅遊。</p>';
-    return;
-  }
+    if (!archivedTrips || !archivedTrips.length) {
+        container.innerHTML = '<p class="field-hint">目前沒有已封存的旅遊。</p>';
+        return;
+    }
 
-  container.innerHTML = archivedTrips.map(trip => `
+    container.innerHTML = archivedTrips.map(trip => `
     <div class="list-row">
       <div class="list-info">
         <span class="mini-icon">📦</span>
@@ -1114,90 +1115,191 @@ function renderArchivedTrips() {
 }
 
 function renderTripHeaders() {
-  const trip = currentTrip();
-  safeSetText('#hero-title', `${trip.name}｜快速記一筆花費。`);
-  safeSetText('#summary-trip-title', `${trip.name}｜目前統計`);
-  safeSetText('#summary-trip-id', trip.id);
-  safeSetText('#expense-list-subtitle', `目前載入 ${trip.name} 的支出紀錄。`);
-  safeSetText('#summary-member-count', `${members.length} 人`);
+    const trip = currentTrip();
+    safeSetText('#hero-title', `${trip.name}｜快速記一筆花費。`);
+    safeSetText('#summary-trip-title', `${trip.name}｜目前統計`);
+    safeSetText('#summary-trip-id', trip.id);
+    safeSetText('#expense-list-subtitle', `目前載入 ${trip.name} 的支出紀錄。`);
+    safeSetText('#summary-member-count', `${members.length} 人`);
 }
 
 function renderRates() {
-  const container = $('#rate-list');
-  if (!container) return;
-  container.innerHTML = Object.entries(exchangeRates).map(([currency, rate]) => `
+    const container = $('#rate-list');
+    if (!container) return;
+    container.innerHTML = Object.entries(exchangeRates).map(([currency, rate]) => `
     <div class="list-row"><div class="list-info"><span class="mini-icon">${currencySymbol(currency)}</span><div><strong>${currency} → TWD</strong><small>1 ${currency} = ${rate} TWD</small></div></div></div>
   `).join('');
 }
 
 function currencySymbol(currency) {
-  return { JPY: '¥', USD: '$', KRW: '₩', EUR: '€', THB: '฿', TWD: 'NT' }[currency] || currency;
+    return { JPY: '¥', USD: '$', KRW: '₩', EUR: '€', THB: '฿', TWD: 'NT' }[currency] || currency;
 }
 
 function renderMembers() {
-  const memberList = $('#member-list');
-  if (memberList) {
-    memberList.innerHTML = members.map((item, index) => `
+    const memberList = $('#member-list');
+    if (memberList) {
+        memberList.innerHTML = members.map((item, index) => `
       <div class="list-row"><div class="list-info"><span class="avatar ${index === 1 ? 'green' : index === 2 ? 'orange' : index === 3 ? 'purple' : ''}">${item.avatar}</span><div><strong>${item.name}</strong><small>${item.note}</small></div></div><button class="icon-btn" type="button" data-remove="member" data-id="${item.id}" title="刪除成員">×</button></div>
     `).join('') || '<p class="field-hint">這個旅遊尚無成員。</p>';
-  }
+    }
 
-  const paidBy = $('#paid-by');
-  if (paidBy) paidBy.innerHTML = members.map(item => `<option value="${item.name}">${item.name}</option>`).join('');
+    const paidBy = $('#paid-by');
+    if (paidBy) {
+        const previousValue = paidBy.value;
+        paidBy.innerHTML = members.map(item => `<option value="${item.name}">${item.name}</option>`).join('');
+        if (previousValue && members.some(item => item.name === previousValue)) paidBy.value = previousValue;
+        syncIconSelect(paidBy);
+    }
 
-  const participantOptions = $('#participant-options');
-  if (participantOptions) {
-    participantOptions.innerHTML = members.map(item => `<label class="check-chip"><input type="checkbox" value="${item.name}" checked /> ${item.name}</label>`).join('');
-    renderSplitConfig();
-  }
+    const participantOptions = $('#participant-options');
+    if (participantOptions) {
+        participantOptions.innerHTML = members.map(item => `<label class="check-chip"><input type="checkbox" value="${item.name}" checked /> ${item.name}</label>`).join('');
+        renderSplitConfig();
+    }
 }
 
 function renderList(data, listId, type) {
-  const container = $(listId);
-  if (!container) return;
-  container.innerHTML = data.map(item => `
+    const container = $(listId);
+    if (!container) return;
+    container.innerHTML = data.map(item => `
     <div class="list-row"><div class="list-info"><span class="mini-icon">${item.icon}</span><div><strong>${item.name}</strong><small>${item.note}</small></div></div><button class="icon-btn" type="button" data-remove="${type}" data-id="${item.id}" title="刪除">×</button></div>
   `).join('') || '<p class="field-hint">這個旅遊尚無資料。</p>';
 }
 
-function renderSelects() {
-  const categorySelect = $('#category-id');
-  const paymentSelect = $('#payment-method-id');
-  if (categorySelect) categorySelect.innerHTML = '<option value="">請選擇分類</option>' + categories.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
-  if (paymentSelect) paymentSelect.innerHTML = '<option value="">請選擇付款方式</option>' + paymentMethods.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+function getIconSelectConfig(select) {
+    if (!select) return null;
+    if (select.id === 'trip-select') {
+        return {
+            items: Array.from(select.options).map(option => ({ value: option.value, label: option.textContent, icon: '旅' })),
+            placeholder: '請選擇旅遊',
+            emptyLabel: '尚無旅遊'
+        };
+    }
+    if (select.id === 'expense-currency') {
+        return {
+            items: Array.from(select.options).map(option => ({
+                value: option.value,
+                label: option.textContent,
+                icon: currencySymbol(option.value)
+            })),
+            placeholder: '請選擇幣別',
+            emptyLabel: '尚無幣別'
+        };
+    }
+    if (select.id === 'paid-by') {
+        return {
+            items: members.map(item => ({ value: item.name, label: item.name, icon: item.avatar || String(item.name || '?').slice(0, 1).toUpperCase(), avatar: true })),
+            placeholder: '請選擇付款人',
+            emptyLabel: '尚無成員'
+        };
+    }
+    if (select.id === 'category-id') {
+        return {
+            items: categories.map(item => ({ value: item.id, label: item.name, icon: item.icon })),
+            placeholder: '請選擇分類',
+            emptyLabel: '尚無分類'
+        };
+    }
+    if (select.id === 'payment-method-id') {
+        return {
+            items: paymentMethods.map(item => ({ value: item.id, label: item.name, icon: item.icon })),
+            placeholder: '請選擇付款方式',
+            emptyLabel: '尚無付款方式'
+        };
+    }
+    return null;
+}
 
-  const currencySelect = $('#expense-currency');
-  if (currencySelect) {
-    const lastCurrency = localStorage.getItem('tripsplit_last_currency') || 'JPY';
-    currencySelect.value = lastCurrency;
-    updateExchangePreview();
-  }
+function syncIconSelect(select) {
+    const config = getIconSelectConfig(select);
+    if (!config) return;
+
+    select.classList.add('native-icon-select');
+    let wrapper = select.nextElementSibling;
+    if (!wrapper || !wrapper.classList.contains('icon-select')) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'icon-select';
+        wrapper.innerHTML = `
+      <button class="icon-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="icon-select-value"></span>
+        <span class="icon-select-arrow" aria-hidden="true">⌄</span>
+      </button>
+      <div class="icon-select-menu" role="listbox"></div>
+    `;
+        select.insertAdjacentElement('afterend', wrapper);
+    }
+
+    const selectedItem = config.items.find(item => String(item.value) === select.value);
+    const valueNode = wrapper.querySelector('.icon-select-value');
+    const menu = wrapper.querySelector('.icon-select-menu');
+    const trigger = wrapper.querySelector('.icon-select-trigger');
+    const valueHtml = selectedItem
+        ? `<span class="icon-select-icon${selectedItem.avatar ? ' avatar-style' : ''}">${escapeHtml(selectedItem.icon)}</span><span>${escapeHtml(selectedItem.label)}</span>`
+        : `<span class="icon-select-placeholder">${escapeHtml(config.placeholder)}</span>`;
+
+    valueNode.innerHTML = valueHtml;
+    trigger.setAttribute('aria-label', selectedItem ? `${config.placeholder}：${selectedItem.label}` : config.placeholder);
+    menu.innerHTML = config.items.length
+        ? config.items.map(item => `
+      <button class="icon-select-option${String(item.value) === select.value ? ' selected' : ''}" type="button" role="option" aria-selected="${String(item.value) === select.value}" data-select-target="${select.id}" data-value="${escapeHtml(item.value)}">
+        <span class="icon-select-icon${item.avatar ? ' avatar-style' : ''}">${escapeHtml(item.icon)}</span>
+        <span>${escapeHtml(item.label)}</span>
+      </button>
+    `).join('')
+        : `<div class="icon-select-empty">${escapeHtml(config.emptyLabel)}</div>`;
+}
+
+function closeIconSelects(exceptWrapper = null) {
+    document.querySelectorAll('.icon-select.open').forEach(wrapper => {
+        if (wrapper === exceptWrapper) return;
+        wrapper.classList.remove('open');
+        wrapper.querySelector('.icon-select-trigger')?.setAttribute('aria-expanded', 'false');
+    });
+}
+
+function syncAllIconSelects() {
+    document.querySelectorAll('select').forEach(syncIconSelect);
+}
+
+function renderSelects() {
+    const categorySelect = $('#category-id');
+    const paymentSelect = $('#payment-method-id');
+    if (categorySelect) categorySelect.innerHTML = '<option value="">請選擇分類</option>' + categories.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+    if (paymentSelect) paymentSelect.innerHTML = '<option value="">請選擇付款方式</option>' + paymentMethods.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+
+    const currencySelect = $('#expense-currency');
+    if (currencySelect) {
+        const lastCurrency = localStorage.getItem('tripsplit_last_currency') || 'JPY';
+        currencySelect.value = lastCurrency;
+        updateExchangePreview();
+    }
+    syncAllIconSelects();
 }
 
 function getVisibleExpenses() {
-  const keyword = expenseSearchTerm.trim().toLowerCase();
-  if (!keyword) return expenses;
-  return expenses.filter(expense => [
-    expense.title,
-    expense.payer,
-    expense.category,
-    expense.payment,
-    expense.currency,
-    expense.split,
-    String(expense.amount || ''),
-    String(expense.twd || '')
-  ].some(value => String(value || '').toLowerCase().includes(keyword)));
+    const keyword = expenseSearchTerm.trim().toLowerCase();
+    if (!keyword) return expenses;
+    return expenses.filter(expense => [
+        expense.title,
+        expense.payer,
+        expense.category,
+        expense.payment,
+        expense.currency,
+        expense.split,
+        String(expense.amount || ''),
+        String(expense.twd || '')
+    ].some(value => String(value || '').toLowerCase().includes(keyword)));
 }
 
 function renderExpenses() {
-  const list = $('#expense-list');
-  const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
-  safeSetText('#summary-total', `NT$ ${money.format(Math.round(total))}`);
-  safeSetText('#summary-count', `${expenses.length} 筆`);
+    const list = $('#expense-list');
+    const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
+    safeSetText('#summary-total', `NT$ ${money.format(Math.round(total))}`);
+    safeSetText('#summary-count', `${expenses.length} 筆`);
 
-  if (!list) return;
-  const visibleExpenses = getVisibleExpenses();
-  list.innerHTML = visibleExpenses.map(expense => `
+    if (!list) return;
+    const visibleExpenses = getVisibleExpenses();
+    list.innerHTML = visibleExpenses.map(expense => `
     <article class="expense-item">
       <div class="expense-icon">${expense.icon}</div>
       <div class="expense-meta"><strong>${expense.title}</strong><span>付款人 ${expense.payer || '未指定'}・${expense.category || '未分類'}・付款方式 ${expense.payment || '未指定'}・${expense.currency} ${money.format(expense.amount)}・系統匯率 ${expense.rate}・${expense.split}</span>${buildReceiptLinks(expense)}</div>
@@ -1207,320 +1309,345 @@ function renderExpenses() {
 }
 
 function bindTripSwitch() {
-  const form = $('#trip-switch-form');
-  const select = $('#trip-select');
-  if (!form || !select) return;
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    currentTripId = select.value;
-    localStorage.setItem('tripsplit_current_trip_id', currentTripId);
-    localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'manual');
-    await loadCurrentTripData();
-  });
-  select.addEventListener('change', async () => {
-    currentTripId = select.value;
-    localStorage.setItem('tripsplit_current_trip_id', currentTripId);
-    localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'manual');
-    await loadCurrentTripData();
-  });
+    const form = $('#trip-switch-form');
+    const select = $('#trip-select');
+    if (!form || !select) return;
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        currentTripId = select.value;
+        localStorage.setItem('tripsplit_current_trip_id', currentTripId);
+        localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'manual');
+        await loadCurrentTripData();
+    });
+    select.addEventListener('change', async () => {
+        currentTripId = select.value;
+        localStorage.setItem('tripsplit_current_trip_id', currentTripId);
+        localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'manual');
+        await loadCurrentTripData();
+    });
 }
 
 function bindSettingsForms() {
-  const tripCreateForm = $('#trip-create-form');
-  if (tripCreateForm) {
-    tripCreateForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const input = $('#new-trip-name');
-      const name = input.value.trim();
-      if (!name) return;
-      const newTripId = `trip_${Date.now()}`;
-      input.value = '';
-      trips.push({ id: newTripId, name, baseCurrency: 'TWD', updatedAt: new Date().toISOString() });
-      currentTripId = newTripId;
-      markTripModified(currentTripId);
-      localStorage.setItem('tripsplit_current_trip_id', currentTripId);
-      localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'manual');
-      renderAll();
-      try {
-        await jsonp('addTrip', { trip_id: newTripId, trip_name: name, base_currency: 'TWD', created_by: 'Dustin' });
-        await loadTrips();
-      } catch (error) {
-        console.warn(error);
-      }
-      await loadCurrentTripData();
-    });
-  }
+    const tripCreateForm = $('#trip-create-form');
+    if (tripCreateForm) {
+        tripCreateForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const input = $('#new-trip-name');
+            const name = input.value.trim();
+            if (!name) return;
+            const newTripId = `trip_${Date.now()}`;
+            input.value = '';
+            trips.push({ id: newTripId, name, baseCurrency: 'TWD', updatedAt: new Date().toISOString() });
+            currentTripId = newTripId;
+            markTripModified(currentTripId);
+            localStorage.setItem('tripsplit_current_trip_id', currentTripId);
+            localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'manual');
+            renderAll();
+            try {
+                await jsonp('addTrip', { trip_id: newTripId, trip_name: name, base_currency: 'TWD', created_by: 'Dustin' });
+                await loadTrips();
+            } catch (error) {
+                console.warn(error);
+            }
+            await loadCurrentTripData();
+        });
+    }
 
-  const memberForm = $('#member-form');
-  if (memberForm) {
-    memberForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const input = $('#member-name');
-      const name = input.value.trim();
-      if (!name) return;
-      input.value = '';
-      await saveThenReload('addMember', { trip_id: currentTripId, member_name: name, email_or_note: '旅伴', avatar_text: name.slice(0, 1).toUpperCase() });
-    });
-  }
+    const memberForm = $('#member-form');
+    if (memberForm) {
+        memberForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const input = $('#member-name');
+            const name = input.value.trim();
+            if (!name) return;
+            input.value = '';
+            await saveThenReload('addMember', { trip_id: currentTripId, member_name: name, email_or_note: '旅伴', avatar_text: name.slice(0, 1).toUpperCase() });
+        });
+    }
 
-  const categoryForm = $('#category-form');
-  if (categoryForm) {
-    categoryForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const name = $('#new-category-name').value.trim();
-      const icon = $('#new-category-icon').value.trim() || '🏷';
-      if (!name) return;
-      $('#new-category-name').value = '';
-      $('#new-category-icon').value = '';
-      await saveThenReload('addCategory', { trip_id: currentTripId, category_name: name, icon, note: '自訂分類' });
-    });
-  }
+    const categoryForm = $('#category-form');
+    if (categoryForm) {
+        categoryForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const name = $('#new-category-name').value.trim();
+            const icon = $('#new-category-icon').value.trim() || '🏷';
+            if (!name) return;
+            $('#new-category-name').value = '';
+            $('#new-category-icon').value = '';
+            await saveThenReload('addCategory', { trip_id: currentTripId, category_name: name, icon, note: '自訂分類' });
+        });
+    }
 
-  const paymentForm = $('#payment-form');
-  if (paymentForm) {
-    paymentForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const name = $('#new-payment-name').value.trim();
-      const icon = $('#new-payment-icon').value.trim() || '💳';
-      if (!name) return;
-      $('#new-payment-name').value = '';
-      $('#new-payment-icon').value = '';
-      await saveThenReload('addPaymentMethod', { trip_id: currentTripId, payment_method_name: name, icon, note: '自訂付款方式' });
-    });
-  }
+    const paymentForm = $('#payment-form');
+    if (paymentForm) {
+        paymentForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const name = $('#new-payment-name').value.trim();
+            const icon = $('#new-payment-icon').value.trim() || '💳';
+            if (!name) return;
+            $('#new-payment-name').value = '';
+            $('#new-payment-icon').value = '';
+            await saveThenReload('addPaymentMethod', { trip_id: currentTripId, payment_method_name: name, icon, note: '自訂付款方式' });
+        });
+    }
 }
 
 function bindGlobalClicks() {
-  document.addEventListener('click', async (event) => {
-    const receiptButton = event.target.closest('[data-receipt-url]');
-    if (receiptButton) {
-      const decoded = decodeURIComponent(receiptButton.dataset.receiptUrl || '');
-      openReceiptModal(decoded);
-      return;
-    }
+    document.addEventListener('click', async (event) => {
+        const iconSelectTrigger = event.target.closest('.icon-select-trigger');
+        if (iconSelectTrigger) {
+            const wrapper = iconSelectTrigger.closest('.icon-select');
+            const willOpen = !wrapper.classList.contains('open');
+            closeIconSelects(wrapper);
+            wrapper.classList.toggle('open', willOpen);
+            iconSelectTrigger.setAttribute('aria-expanded', String(willOpen));
+            return;
+        }
 
-    const closeModalButton = event.target.closest('[data-close-receipt-modal]');
-    if (closeModalButton) {
-      closeReceiptModal();
-      return;
-    }
+        const iconSelectOption = event.target.closest('.icon-select-option');
+        if (iconSelectOption) {
+            const select = document.getElementById(iconSelectOption.dataset.selectTarget);
+            if (select) {
+                select.value = iconSelectOption.dataset.value || '';
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                syncIconSelect(select);
+            }
+            closeIconSelects();
+            return;
+        }
 
-    const closeImportTextButton = event.target.closest('[data-close-import-text-modal]');
-    if (closeImportTextButton) {
-      closeImportTextModal();
-      return;
-    }
+        if (!event.target.closest('.icon-select')) closeIconSelects();
 
-    const openChartZoomButton = event.target.closest('[data-open-chart-zoom]');
-    if (openChartZoomButton && typeof openChartZoomModal === 'function') {
-      openChartZoomModal(openChartZoomButton.dataset.openChartZoom || 'expense');
-      return;
-    }
+        const receiptButton = event.target.closest('[data-receipt-url]');
+        if (receiptButton) {
+            const decoded = decodeURIComponent(receiptButton.dataset.receiptUrl || '');
+            openReceiptModal(decoded);
+            return;
+        }
 
-    const closeChartZoomButton = event.target.closest('[data-close-chart-zoom]');
-    if (closeChartZoomButton && typeof closeChartZoomModal === 'function') {
-      closeChartZoomModal();
-      return;
-    }
+        const closeModalButton = event.target.closest('[data-close-receipt-modal]');
+        if (closeModalButton) {
+            closeReceiptModal();
+            return;
+        }
 
-    const previewRemoveButton = event.target.closest('[data-remove-preview-index]');
-    if (previewRemoveButton) {
-      removeReceiptFileAt(Number(previewRemoveButton.dataset.removePreviewIndex));
-      return;
-    }
+        const closeImportTextButton = event.target.closest('[data-close-import-text-modal]');
+        if (closeImportTextButton) {
+            closeImportTextModal();
+            return;
+        }
 
-    const archiveButton = event.target.closest('#archive-trip-btn');
-    if (archiveButton) {
-      if (!currentTripId) return;
-      const confirmArchive = confirm(`確定要封存「${currentTrip().name}」嗎？\n\n封存後，此旅遊將不再顯示在主要下拉選單中。`);
-      if (!confirmArchive) return;
+        const openChartZoomButton = event.target.closest('[data-open-chart-zoom]');
+        if (openChartZoomButton && typeof openChartZoomModal === 'function') {
+            openChartZoomModal(openChartZoomButton.dataset.openChartZoom || 'expense');
+            return;
+        }
 
-      await saveThenReload('archiveTrip', { trip_id: currentTripId });
-      if (trips.length > 0) currentTripId = trips[0].id;
-      else currentTripId = 'trip_default';
-      localStorage.setItem('tripsplit_current_trip_id', currentTripId);
-      localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'auto');
-      await loadTrips();
-      await loadCurrentTripData();
-      return;
-    }
+        const closeChartZoomButton = event.target.closest('[data-close-chart-zoom]');
+        if (closeChartZoomButton && typeof closeChartZoomModal === 'function') {
+            closeChartZoomModal();
+            return;
+        }
 
-    const unarchiveButton = event.target.closest('[data-unarchive-trip]');
-    if (unarchiveButton) {
-      const tripId = unarchiveButton.dataset.unarchiveTrip;
-      const tripName = archivedTrips.find(t => t.id === tripId)?.name || 'Unknown';
-      const confirmUnarchive = confirm(`確定要解除封存「${tripName}」嗎？`);
-      if (!confirmUnarchive) return;
-      await saveThenReload('unarchiveTrip', { trip_id: tripId });
-      await loadTrips();
-      return;
-    }
+        const previewRemoveButton = event.target.closest('[data-remove-preview-index]');
+        if (previewRemoveButton) {
+            removeReceiptFileAt(Number(previewRemoveButton.dataset.removePreviewIndex));
+            return;
+        }
 
-    const button = event.target.closest('[data-remove]');
-    if (!button) return;
-    const id = button.dataset.id;
-    const type = button.dataset.remove;
-    const actionMap = { member: 'deleteMember', category: 'deleteCategory', payment: 'deletePaymentMethod' };
-    const payloadMap = { member: { trip_id: currentTripId, member_id: id }, category: { trip_id: currentTripId, category_id: id }, payment: { trip_id: currentTripId, payment_method_id: id } };
-    if (!actionMap[type]) return;
-    await saveThenReload(actionMap[type], payloadMap[type]);
-  });
+        const archiveButton = event.target.closest('#archive-trip-btn');
+        if (archiveButton) {
+            if (!currentTripId) return;
+            const confirmArchive = confirm(`確定要封存「${currentTrip().name}」嗎？\n\n封存後，此旅遊將不再顯示在主要下拉選單中。`);
+            if (!confirmArchive) return;
+
+            await saveThenReload('archiveTrip', { trip_id: currentTripId });
+            if (trips.length > 0) currentTripId = trips[0].id;
+            else currentTripId = 'trip_default';
+            localStorage.setItem('tripsplit_current_trip_id', currentTripId);
+            localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'auto');
+            await loadTrips();
+            await loadCurrentTripData();
+            return;
+        }
+
+        const unarchiveButton = event.target.closest('[data-unarchive-trip]');
+        if (unarchiveButton) {
+            const tripId = unarchiveButton.dataset.unarchiveTrip;
+            const tripName = archivedTrips.find(t => t.id === tripId)?.name || 'Unknown';
+            const confirmUnarchive = confirm(`確定要解除封存「${tripName}」嗎？`);
+            if (!confirmUnarchive) return;
+            await saveThenReload('unarchiveTrip', { trip_id: tripId });
+            await loadTrips();
+            return;
+        }
+
+        const button = event.target.closest('[data-remove]');
+        if (!button) return;
+        const id = button.dataset.id;
+        const type = button.dataset.remove;
+        const actionMap = { member: 'deleteMember', category: 'deleteCategory', payment: 'deletePaymentMethod' };
+        const payloadMap = { member: { trip_id: currentTripId, member_id: id }, category: { trip_id: currentTripId, category_id: id }, payment: { trip_id: currentTripId, payment_method_id: id } };
+        if (!actionMap[type]) return;
+        await saveThenReload(actionMap[type], payloadMap[type]);
+    });
 }
 
 function bindExpenseForm() {
-  if (typeof renderExpenseChart === 'function') {
-    document.querySelectorAll('input[name="chart_type"]').forEach(input => input.addEventListener('change', () => {
-      renderExpenseChart();
-      if ($('#chart-zoom-modal')?.classList.contains('show') && typeof renderZoomChart === 'function') renderZoomChart();
-    }));
-  }
-  if (typeof renderBudgetChart === 'function') {
-    document.querySelectorAll('input[name="chart_type_budget"]').forEach(input => input.addEventListener('change', () => {
-      renderBudgetChart();
-      if ($('#chart-zoom-modal')?.classList.contains('show') && typeof renderZoomChart === 'function') renderZoomChart();
-    }));
-  }
-  window.addEventListener('resize', () => {
-    if (typeof renderExpenseChart === 'function') renderExpenseChart();
-    if (typeof renderBudgetChart === 'function') renderBudgetChart();
-    if ($('#chart-zoom-modal')?.classList.contains('show') && typeof renderZoomChart === 'function') renderZoomChart();
-  });
-  if (typeof bindChartInteractions === 'function') bindChartInteractions();
-
-  const amountInput = $('#amount-original');
-  if (amountInput) {
-    amountInput.addEventListener('input', () => {
-      updateExchangePreview();
-      const splitType = document.querySelector('input[name="split_type"]:checked')?.value || '平均分';
-      if (splitType === '自訂金額') renderSplitConfig();
-      else updateSplitSummary();
+    if (typeof renderExpenseChart === 'function') {
+        document.querySelectorAll('input[name="chart_type"]').forEach(input => input.addEventListener('change', () => {
+            renderExpenseChart();
+            if ($('#chart-zoom-modal')?.classList.contains('show') && typeof renderZoomChart === 'function') renderZoomChart();
+        }));
+    }
+    if (typeof renderBudgetChart === 'function') {
+        document.querySelectorAll('input[name="chart_type_budget"]').forEach(input => input.addEventListener('change', () => {
+            renderBudgetChart();
+            if ($('#chart-zoom-modal')?.classList.contains('show') && typeof renderZoomChart === 'function') renderZoomChart();
+        }));
+    }
+    window.addEventListener('resize', () => {
+        if (typeof renderExpenseChart === 'function') renderExpenseChart();
+        if (typeof renderBudgetChart === 'function') renderBudgetChart();
+        if ($('#chart-zoom-modal')?.classList.contains('show') && typeof renderZoomChart === 'function') renderZoomChart();
     });
-  }
+    if (typeof bindChartInteractions === 'function') bindChartInteractions();
 
-  $('#expense-currency')?.addEventListener('change', updateExchangePreview);
-  $('#participant-options')?.addEventListener('change', (event) => {
-    if (event.target.matches('input[type="checkbox"]')) renderSplitConfig();
-  });
-  document.querySelectorAll('input[name="split_type"]').forEach(input => input.addEventListener('change', renderSplitConfig));
-  $('#split-config')?.addEventListener('input', (event) => {
-    if (event.target.matches('.split-input')) updateSplitSummary();
-  });
-  ['#receipt-files', '#receipt-camera-files'].forEach(selector => {
-    $(selector)?.addEventListener('change', (event) => {
-      appendReceiptFiles(event.target.files || []);
-      event.target.value = '';
+    const amountInput = $('#amount-original');
+    if (amountInput) {
+        amountInput.addEventListener('input', () => {
+            updateExchangePreview();
+            const splitType = document.querySelector('input[name="split_type"]:checked')?.value || '平均分';
+            if (splitType === '自訂金額') renderSplitConfig();
+            else updateSplitSummary();
+        });
+    }
+
+    $('#expense-currency')?.addEventListener('change', updateExchangePreview);
+    $('#participant-options')?.addEventListener('change', (event) => {
+        if (event.target.matches('input[type="checkbox"]')) renderSplitConfig();
     });
-  });
-
-  const searchInput = $('#expense-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      expenseSearchTerm = searchInput.value || '';
-      renderExpenses();
+    document.querySelectorAll('input[name="split_type"]').forEach(input => input.addEventListener('change', renderSplitConfig));
+    $('#split-config')?.addEventListener('input', (event) => {
+        if (event.target.matches('.split-input')) updateSplitSummary();
     });
-  }
+    ['#receipt-files', '#receipt-camera-files'].forEach(selector => {
+        $(selector)?.addEventListener('change', (event) => {
+            appendReceiptFiles(event.target.files || []);
+            event.target.value = '';
+        });
+    });
 
-  const dateInput = $('#expense-date');
-  if (dateInput && !dateInput.value) {
-    dateInput.value = new Date().toISOString().slice(0, 10);
-  }
+    const searchInput = $('#expense-search');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            expenseSearchTerm = searchInput.value || '';
+            renderExpenses();
+        });
+    }
 
-  const expenseForm = $('#expense-create-form');
-  if (!expenseForm) return;
-  expenseForm.addEventListener('reset', () => {
-    window.setTimeout(() => {
-      clearReceiptFiles();
-      updateExchangePreview();
-      renderSplitConfig();
-      if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
-    }, 0);
-  });
-  expenseForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const selectedCategory = categories.find(item => String(item.id) === $('#category-id').value);
-    const selectedPayment = paymentMethods.find(item => String(item.id) === $('#payment-method-id').value);
-    const amount = Number($('#amount-original').value || 0);
-    const currency = $('#expense-currency').value;
-    const rate = Number(exchangeRates[currency] || 1);
-    const split = document.querySelector('input[name="split_type"]:checked')?.value || '平均分';
-    if (!$('#expense-title').value.trim() || !selectedCategory || !selectedPayment || !amount) return;
+    const dateInput = $('#expense-date');
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().slice(0, 10);
+    }
 
-    const splitValidation = validateSplitInputs(split, amount);
-    if (!splitValidation.ok) return;
+    const expenseForm = $('#expense-create-form');
+    if (!expenseForm) return;
+    expenseForm.addEventListener('reset', () => {
+        window.setTimeout(() => {
+            clearReceiptFiles();
+            updateExchangePreview();
+            renderSplitConfig();
+            syncAllIconSelects();
+            if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+        }, 0);
+    });
+    expenseForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const selectedCategory = categories.find(item => String(item.id) === $('#category-id').value);
+        const selectedPayment = paymentMethods.find(item => String(item.id) === $('#payment-method-id').value);
+        const amount = Number($('#amount-original').value || 0);
+        const currency = $('#expense-currency').value;
+        const rate = Number(exchangeRates[currency] || 1);
+        const split = document.querySelector('input[name="split_type"]:checked')?.value || '平均分';
+        if (!$('#expense-title').value.trim() || !selectedCategory || !selectedPayment || !amount) return;
 
-    setStatus('正在處理收據照片...');
-    const receiptPayloads = await getReceiptPayloads();
+        const splitValidation = validateSplitInputs(split, amount);
+        if (!splitValidation.ok) return;
 
-    await saveThenReload('addExpense', {
-      trip_id: currentTripId,
-      title: $('#expense-title').value.trim(),
-      payer_member_name: $('#paid-by').value,
-      category_id: selectedCategory.id,
-      category_name: selectedCategory.name,
-      payment_method_id: selectedPayment.id,
-      payment_method_name: selectedPayment.name,
-      expense_date: $('#expense-date').value,
-      amount_original: amount,
-      original_currency: currency,
-      exchange_rate_to_twd: rate,
-      amount_twd: Math.round(amount * rate),
-      split_type: split,
-      split_details: splitValidation.splitDetails,
-      note: $('#note').value,
-      participants: getSelectedParticipants(),
-      receipts: receiptPayloads
-    }, receiptPayloads.length ? 4500 : 1000);
+        setStatus('正在處理收據照片...');
+        const receiptPayloads = await getReceiptPayloads();
 
-    localStorage.setItem('tripsplit_last_currency', currency);
-    expenseForm.reset();
-    clearReceiptFiles();
-    if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
-    updateExchangePreview();
-    renderSplitConfig();
-    $('#expenses')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+        await saveThenReload('addExpense', {
+            trip_id: currentTripId,
+            title: $('#expense-title').value.trim(),
+            payer_member_name: $('#paid-by').value,
+            category_id: selectedCategory.id,
+            category_name: selectedCategory.name,
+            payment_method_id: selectedPayment.id,
+            payment_method_name: selectedPayment.name,
+            expense_date: $('#expense-date').value,
+            amount_original: amount,
+            original_currency: currency,
+            exchange_rate_to_twd: rate,
+            amount_twd: Math.round(amount * rate),
+            split_type: split,
+            split_details: splitValidation.splitDetails,
+            note: $('#note').value,
+            participants: getSelectedParticipants(),
+            receipts: receiptPayloads
+        }, receiptPayloads.length ? 4500 : 1000);
+
+        localStorage.setItem('tripsplit_last_currency', currency);
+        expenseForm.reset();
+        clearReceiptFiles();
+        if (dateInput) dateInput.value = new Date().toISOString().slice(0, 10);
+        updateExchangePreview();
+        renderSplitConfig();
+        $('#expenses')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
 }
 
 // ── 匯入文字品項 Modal ───────────────────────────────────────────────────────
 let importTextItems = []; // 保持 modal 內資料
 
 function openImportTextModal() {
-  const modal = $('#import-text-modal');
-  if (!modal) return;
-  modal.classList.add('show');
-  modal.setAttribute('aria-hidden', 'false');
-  renderImportTextResult();
+    const modal = $('#import-text-modal');
+    if (!modal) return;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    renderImportTextResult();
 }
 
 function closeImportTextModal() {
-  const modal = $('#import-text-modal');
-  if (!modal) return;
-  modal.classList.remove('show');
-  modal.setAttribute('aria-hidden', 'true');
+    const modal = $('#import-text-modal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
 }
 
 function parseImportText(raw) {
-  return raw.split('\n')
-    .map(line => line.trim())
-    .filter(line => line.includes('|'))
-    .map(line => {
-      const parts = line.split('|');
-      const date = (parts[0] || '').trim();
-      const title = (parts[1] || '').trim();
-      const amountRaw = (parts[2] || '').trim().replace(/[^0-9.]/g, '');
-      const amount = Number(amountRaw) || 0;
-      return { date, title, amount };
-    })
-    .filter(item => item.title);
+    return raw.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.includes('|'))
+        .map(line => {
+            const parts = line.split('|');
+            const date = (parts[0] || '').trim();
+            const title = (parts[1] || '').trim();
+            const amountRaw = (parts[2] || '').trim().replace(/[^0-9.]/g, '');
+            const amount = Number(amountRaw) || 0;
+            return { date, title, amount };
+        })
+        .filter(item => item.title);
 }
 
 function renderImportTextResult() {
-  const section = $('#import-text-result-section');
-  const list = $('#import-text-result-list');
-  if (!section || !list) return;
-  if (!importTextItems.length) { section.style.display = 'none'; return; }
-  section.style.display = '';
-  list.innerHTML = importTextItems.map((item, idx) => `
+    const section = $('#import-text-result-section');
+    const list = $('#import-text-result-list');
+    if (!section || !list) return;
+    if (!importTextItems.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    list.innerHTML = importTextItems.map((item, idx) => `
     <div class="import-text-result-row" data-import-idx="${idx}">
       <div class="import-text-result-info">
         <span class="import-text-result-date">${escapeHtml(item.date)}</span>
@@ -1536,98 +1663,102 @@ function renderImportTextResult() {
 }
 
 function escapeHtml(str) {
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function bindImportTextModal() {
-  $('#open-import-text-btn')?.addEventListener('click', openImportTextModal);
+    $('#open-import-text-btn')?.addEventListener('click', openImportTextModal);
 
-  $('#copy-ai-prompt-btn')?.addEventListener('click', () => {
-    const text = $('#ai-prompt-text')?.textContent || '';
-    navigator.clipboard?.writeText(text).then(() => {
-      const btn = $('#copy-ai-prompt-btn');
-      if (btn) { btn.textContent = '已複製！'; setTimeout(() => { btn.textContent = '複製'; }, 1800); }
+    $('#copy-ai-prompt-btn')?.addEventListener('click', () => {
+        const text = $('#ai-prompt-text')?.textContent || '';
+        navigator.clipboard?.writeText(text).then(() => {
+            const btn = $('#copy-ai-prompt-btn');
+            if (btn) { btn.textContent = '已複製！'; setTimeout(() => { btn.textContent = '複製'; }, 1800); }
+        });
     });
-  });
 
-  $('#parse-import-text-btn')?.addEventListener('click', () => {
-    const raw = $('#import-text-textarea')?.value || '';
-    importTextItems = parseImportText(raw);
-    // clear textarea after parsing, per spec: 匯入新的資料要先清除後再進行導入
-    const ta = $('#import-text-textarea');
-    if (ta) ta.value = '';
-    renderImportTextResult();
-  });
+    $('#parse-import-text-btn')?.addEventListener('click', () => {
+        const raw = $('#import-text-textarea')?.value || '';
+        importTextItems = parseImportText(raw);
+        // clear textarea after parsing, per spec: 匯入新的資料要先清除後再進行導入
+        const ta = $('#import-text-textarea');
+        if (ta) ta.value = '';
+        renderImportTextResult();
+    });
 
-  $('#clear-import-text-btn')?.addEventListener('click', () => {
-    const ta = $('#import-text-textarea');
-    if (ta) ta.value = '';
-    importTextItems = [];
-    renderImportTextResult();
-  });
+    $('#clear-import-text-btn')?.addEventListener('click', () => {
+        const ta = $('#import-text-textarea');
+        if (ta) ta.value = '';
+        importTextItems = [];
+        renderImportTextResult();
+    });
 
-  $('#import-text-result-list')?.addEventListener('click', (event) => {
-    const importBtn = event.target.closest('[data-import-item]');
-    if (importBtn) {
-      const idx = Number(importBtn.dataset.importItem);
-      const item = importTextItems[idx];
-      if (!item) return;
-      // fill form
-      const titleInput = $('#expense-title');
-      const dateInput = $('#expense-date');
-      const amountInput = $('#amount-original');
-      if (titleInput) titleInput.value = item.title;
-      if (dateInput && item.date) {
-        // try parse date: YYYY/MM/DD or YYYY-MM-DD
-        const normalized = item.date.replace(/\//g, '-');
-        dateInput.value = normalized;
-      }
-      if (amountInput) {
-        amountInput.value = item.amount;
-        updateExchangePreview();
-      }
-      closeImportTextModal();
-      $('#expense-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
+    $('#import-text-result-list')?.addEventListener('click', (event) => {
+        const importBtn = event.target.closest('[data-import-item]');
+        if (importBtn) {
+            const idx = Number(importBtn.dataset.importItem);
+            const item = importTextItems[idx];
+            if (!item) return;
+            // fill form
+            const titleInput = $('#expense-title');
+            const dateInput = $('#expense-date');
+            const amountInput = $('#amount-original');
+            if (titleInput) titleInput.value = item.title;
+            if (dateInput && item.date) {
+                // try parse date: YYYY/MM/DD or YYYY-MM-DD
+                const normalized = item.date.replace(/\//g, '-');
+                dateInput.value = normalized;
+            }
+            if (amountInput) {
+                amountInput.value = item.amount;
+                updateExchangePreview();
+            }
+            closeImportTextModal();
+            $('#expense-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
 
-    const removeBtn = event.target.closest('[data-remove-import-item]');
-    if (removeBtn) {
-      const idx = Number(removeBtn.dataset.removeImportItem);
-      importTextItems.splice(idx, 1);
-      renderImportTextResult();
-    }
-  });
+        const removeBtn = event.target.closest('[data-remove-import-item]');
+        if (removeBtn) {
+            const idx = Number(removeBtn.dataset.removeImportItem);
+            importTextItems.splice(idx, 1);
+            renderImportTextResult();
+        }
+    });
 }
 
 // ── End 匯入文字品項 Modal ───────────────────────────────────────────────────
 function bindKeyboard() {
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    if ($('#import-text-modal')?.classList.contains('show')) {
-      closeImportTextModal();
-      return;
-    }
-    if ($('#chart-zoom-modal')?.classList.contains('show') && typeof closeChartZoomModal === 'function') {
-      closeChartZoomModal();
-      return;
-    }
-    if ($('#receipt-modal')?.classList.contains('show')) closeReceiptModal();
-  });
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        if (document.querySelector('.icon-select.open')) {
+            closeIconSelects();
+            return;
+        }
+        if ($('#import-text-modal')?.classList.contains('show')) {
+            closeImportTextModal();
+            return;
+        }
+        if ($('#chart-zoom-modal')?.classList.contains('show') && typeof closeChartZoomModal === 'function') {
+            closeChartZoomModal();
+            return;
+        }
+        if ($('#receipt-modal')?.classList.contains('show')) closeReceiptModal();
+    });
 }
 
 function bindAppEvents() {
-  bindTripSwitch();
-  bindSettingsForms();
-  bindGlobalClicks();
-  bindExpenseForm();
-  bindKeyboard();
-  bindImportTextModal();
+    bindTripSwitch();
+    bindSettingsForms();
+    bindGlobalClicks();
+    bindExpenseForm();
+    bindKeyboard();
+    bindImportTextModal();
 }
 
 (async function init() {
-  bindAppEvents();
-  renderAll();
-  await loadTrips();
-  await loadCurrentTripData();
+    bindAppEvents();
+    renderAll();
+    await loadTrips();
+    await loadCurrentTripData();
 })();
