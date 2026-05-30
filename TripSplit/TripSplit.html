@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TripSplit｜快速記帳</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='48'%3E%E6%97%85%3C/text%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="./assets/app.css?v=11" />
+  <link rel="stylesheet" href="./assets/app.css?v=14" />
 </head>
 <body data-page="home">
   <header class="app-header">
@@ -147,6 +147,50 @@
             <div class="card-header"><div class="card-title"><h2>結算建議</h2><p>依台幣 balance 產生轉帳建議。</p></div></div>
             <div class="card-body"><div class="settlement-list" id="settlement-list"></div></div>
           </section>
+
+          <section class="card" id="expense-charts">
+            <div class="card-header">
+              <div class="card-title"><h2>支出分析</h2><p>第一張看支出結構，第二張看預算監控。</p></div>
+            </div>
+            <div class="card-body chart-card-body">
+              <section class="chart-group-panel" data-chart-group="expense">
+                <div class="chart-toolbar" role="radiogroup" aria-label="選擇支出結構圖表">
+                  <label class="chart-option"><input type="radio" name="chart_type" value="pie" checked /><span>分類圓餅</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type" value="bar" /><span>分類直條</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type" value="line" /><span>每日折線</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type" value="category_trend" /><span>分類累積</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type" value="currency" /><span>幣別占比</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type" value="heatmap" /><span>每日熱度</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type" value="payer" /><span>付款人</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type" value="balance" /><span>收付</span></label>
+                </div>
+                <div class="chart-wrap">
+                  <button class="chart-zoom-btn" type="button" data-open-chart-zoom="expense" aria-label="放大支出結構圖">⤢ 放大</button>
+                  <canvas id="expense-chart" width="640" height="420" aria-label="支出結構分析圖表"></canvas>
+                  <div class="chart-tooltip" id="chart-tooltip" role="status" aria-live="polite"></div>
+                  <p class="field-hint chart-empty" id="chart-empty">目前沒有足夠支出資料可繪製圖表。</p>
+                </div>
+                <div class="chart-legend" id="chart-legend"></div>
+              </section>
+
+              <section class="chart-group-panel" data-chart-group="budget">
+                <div class="chart-toolbar" role="radiogroup" aria-label="選擇預算監控圖表">
+                  <label class="chart-option"><input type="radio" name="chart_type_budget" value="budget_actual" checked /><span>預算 vs 實際</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type_budget" value="burnup" /><span>累積燒錢趨勢</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type_budget" value="member_net_trend" /><span>成員淨額變化</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type_budget" value="category_member_matrix" /><span>分類×成員熱圖</span></label>
+                  <label class="chart-option"><input type="radio" name="chart_type_budget" value="weekday_distribution" /><span>星期分布</span></label>
+                </div>
+                <div class="chart-wrap">
+                  <button class="chart-zoom-btn" type="button" data-open-chart-zoom="budget" aria-label="放大預算監控圖">⤢ 放大</button>
+                  <canvas id="budget-chart" width="640" height="420" aria-label="預算監控分析圖表"></canvas>
+                  <div class="chart-tooltip" id="budget-chart-tooltip" role="status" aria-live="polite"></div>
+                  <p class="field-hint chart-empty" id="budget-chart-empty">目前沒有足夠支出資料可繪製圖表。</p>
+                </div>
+                <div class="chart-legend" id="budget-chart-legend"></div>
+              </section>
+            </div>
+          </section>
         </aside>
       </div>
     </div>
@@ -170,6 +214,20 @@
     </div>
   </div>
 
-  <script src="./assets/app.js?v=11"></script>
+  <div class="receipt-modal chart-zoom-modal" id="chart-zoom-modal" aria-hidden="true" role="dialog" aria-label="圖表放大檢視">
+    <div class="receipt-modal-backdrop" data-close-chart-zoom="true"></div>
+    <div class="receipt-modal-panel chart-zoom-panel" role="document">
+      <button class="receipt-modal-close" type="button" data-close-chart-zoom="true" aria-label="關閉放大圖表">×</button>
+      <div class="chart-wrap chart-zoom-wrap">
+        <canvas id="chart-zoom-canvas" width="1280" height="760" aria-label="放大圖表"></canvas>
+        <div class="chart-tooltip" id="chart-zoom-tooltip" role="status" aria-live="polite"></div>
+        <p class="field-hint chart-empty" id="chart-zoom-empty">目前沒有足夠支出資料可繪製圖表。</p>
+      </div>
+      <div class="chart-legend" id="chart-zoom-legend"></div>
+    </div>
+  </div>
+
+  <script src="./assets/charts.js?v=7"></script>
+  <script src="./assets/app.js?v=18"></script>
 </body>
 </html>

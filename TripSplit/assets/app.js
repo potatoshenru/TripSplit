@@ -296,6 +296,7 @@ function normalizeExpenses(rows, receiptRows = []) {
       payer: row.payer_member_name || row.payer || '',
       category: row.category_name || (category ? category.name : ''),
       payment: row.payment_method_name || row.payment || '',
+      date: row.expense_date || row.date || row.created_at || '',
       currency: row.original_currency || row.currency || 'TWD',
       amount: Number(row.amount_original || row.amount || 0),
       rate: Number(row.exchange_rate_to_twd || row.rate || 1),
@@ -659,6 +660,7 @@ function renderBalancesAndSettlements() {
     ? suggestions.map(item => `<div class="settlement-item"><div class="settlement-route"><span>${item.from}</span><span class="arrow">→</span><span>${item.to}</span></div><strong>NT$ ${money.format(item.amount)}</strong></div>`).join('')
     : '<p class="field-hint">目前已接近平衡，暫無建議轉帳。</p>';
 }
+
 function updateExchangePreview() {
   const currency = $('#expense-currency').value;
   const amount = Number($('#amount-original').value || 0);
@@ -1045,6 +1047,8 @@ function renderAll() {
   renderSelects();
   renderExpenses();
   renderBalancesAndSettlements();
+  if (typeof renderExpenseChart === 'function') renderExpenseChart();
+  if (typeof renderBudgetChart === 'function') renderBudgetChart();
   if ($('#expense-currency') && $('#amount-original')) updateExchangePreview();
 }
 
@@ -1301,6 +1305,18 @@ function bindGlobalClicks() {
       return;
     }
 
+    const openChartZoomButton = event.target.closest('[data-open-chart-zoom]');
+    if (openChartZoomButton && typeof openChartZoomModal === 'function') {
+      openChartZoomModal(openChartZoomButton.dataset.openChartZoom || 'expense');
+      return;
+    }
+
+    const closeChartZoomButton = event.target.closest('[data-close-chart-zoom]');
+    if (closeChartZoomButton && typeof closeChartZoomModal === 'function') {
+      closeChartZoomModal();
+      return;
+    }
+
     const previewRemoveButton = event.target.closest('[data-remove-preview-index]');
     if (previewRemoveButton) {
       removeReceiptFileAt(Number(previewRemoveButton.dataset.removePreviewIndex));
@@ -1346,6 +1362,25 @@ function bindGlobalClicks() {
 }
 
 function bindExpenseForm() {
+  if (typeof renderExpenseChart === 'function') {
+    document.querySelectorAll('input[name="chart_type"]').forEach(input => input.addEventListener('change', () => {
+      renderExpenseChart();
+      if ($('#chart-zoom-modal')?.classList.contains('show') && typeof renderZoomChart === 'function') renderZoomChart();
+    }));
+  }
+  if (typeof renderBudgetChart === 'function') {
+    document.querySelectorAll('input[name="chart_type_budget"]').forEach(input => input.addEventListener('change', () => {
+      renderBudgetChart();
+      if ($('#chart-zoom-modal')?.classList.contains('show') && typeof renderZoomChart === 'function') renderZoomChart();
+    }));
+  }
+  window.addEventListener('resize', () => {
+    if (typeof renderExpenseChart === 'function') renderExpenseChart();
+    if (typeof renderBudgetChart === 'function') renderBudgetChart();
+    if ($('#chart-zoom-modal')?.classList.contains('show') && typeof renderZoomChart === 'function') renderZoomChart();
+  });
+  if (typeof bindChartInteractions === 'function') bindChartInteractions();
+
   const amountInput = $('#amount-original');
   if (amountInput) {
     amountInput.addEventListener('input', () => {
@@ -1442,7 +1477,12 @@ function bindExpenseForm() {
 
 function bindKeyboard() {
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && $('#receipt-modal')?.classList.contains('show')) closeReceiptModal();
+    if (event.key !== 'Escape') return;
+    if ($('#chart-zoom-modal')?.classList.contains('show') && typeof closeChartZoomModal === 'function') {
+      closeChartZoomModal();
+      return;
+    }
+    if ($('#receipt-modal')?.classList.contains('show')) closeReceiptModal();
   });
 }
 

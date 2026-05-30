@@ -292,14 +292,99 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); box-sh
 .settlement-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border-radius: 17px; background: var(--surface-strong); border: 1px solid var(--line); }
 .settlement-route { display: flex; align-items: center; gap: 10px; color: #4a3929; font-weight: 950; }
 .arrow { color: var(--primary-dark); }
+.chart-card-body { display: grid; gap: 14px; }
+.chart-group-panel { display: grid; gap: 12px; }
+.chart-group-panel + .chart-group-panel {
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+.chart-toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.chart-option { position: relative; min-width: 0; cursor: pointer; }
+.chart-option input { position: absolute; opacity: 0; pointer-events: none; }
+.chart-option span {
+  display: grid;
+  min-height: 42px;
+  place-items: center;
+  padding: 9px 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-strong);
+  color: #634e39;
+  font-size: .88rem;
+  font-weight: 950;
+}
+.chart-option input:checked + span { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-dark); box-shadow: 0 0 0 4px rgba(181, 111, 24, .08); }
+.chart-wrap {
+  position: relative;
+  min-height: 250px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fffdf8;
+}
+#expense-chart, #budget-chart { display: block; width: 100%; height: 250px; }
+#expense-chart.is-interactive, #budget-chart.is-interactive, #chart-zoom-canvas.is-interactive { cursor: pointer; }
+.chart-zoom-btn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 3;
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 1px solid #d6b07b;
+  background: rgba(255, 244, 223, .96);
+  color: var(--primary-dark);
+  font-size: .8rem;
+  font-weight: 900;
+}
+.chart-zoom-btn:hover { background: #fff0cf; }
+.chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  display: none;
+  max-width: min(230px, calc(100% - 20px));
+  padding: 9px 11px;
+  border: 1px solid #d6b07b;
+  border-radius: 12px;
+  background: rgba(37, 27, 18, .94);
+  color: #fffaf2;
+  box-shadow: 0 12px 24px rgba(65, 42, 20, .18);
+  font-size: .86rem;
+  font-weight: 900;
+  line-height: 1.35;
+  pointer-events: none;
+}
+.chart-tooltip strong { display: block; color: #fff; font-size: .92rem; overflow-wrap: anywhere; }
+.chart-tooltip span { display: block; color: #f3dfbf; margin-top: 2px; }
+.chart-empty {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 22px;
+  text-align: center;
+}
+.chart-wrap.is-empty #expense-chart,
+.chart-wrap.is-empty #budget-chart { opacity: .16; }
+.chart-wrap.is-empty .chart-empty { display: grid; }
+.chart-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.chart-legend-item { display: flex; align-items: center; gap: 8px; min-width: 0; color: #4a3929; font-size: .86rem; font-weight: 900; }
+.chart-swatch { width: 11px; height: 11px; flex: 0 0 auto; border-radius: 50%; }
+.chart-legend-item span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .receipt-modal { position: fixed; inset: 0; z-index: 200; display: none; }
 .receipt-modal.show { display: block; }
 .receipt-modal-backdrop { position: absolute; inset: 0; background: rgba(20, 15, 10, .62); }
 .receipt-modal-panel { position: relative; width: min(92vw, 760px); max-height: 90vh; margin: 5vh auto; border-radius: 22px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); padding: 16px; display: grid; gap: 12px; }
+#receipt-modal .receipt-modal-panel { width: min(96vw, 1500px); max-height: 94vh; margin: 3vh auto; }
 .receipt-modal-close { justify-self: end; width: 38px; height: 38px; border-radius: 13px; background: #f2e5d1; color: #6b5742; font-size: 1.35rem; line-height: 1; }
-#receipt-modal-image { width: 100%; max-height: 66vh; object-fit: contain; border: 1px solid var(--line); border-radius: 15px; background: #fffdf8; }
+#receipt-modal-image { width: 100%; max-height: min(80vh, 1200px); object-fit: contain; border: 1px solid var(--line); border-radius: 15px; background: #fffdf8; }
 .receipt-modal-actions { display: flex; justify-content: flex-end; }
+.chart-zoom-panel { width: min(96vw, 1500px); max-height: 94vh; }
+.chart-zoom-wrap { min-height: min(74vh, 820px); }
+#chart-zoom-canvas { display: block; width: 100%; height: min(72vh, 780px); }
 
 .mobile-tabbar {
   display: none;
@@ -333,6 +418,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); box-sh
   .expense-item { grid-template-columns: auto 1fr; align-items: start; }
   .expense-amount { grid-column: 1 / -1; text-align: left; padding-left: 52px; }
   .toolbar { align-items: stretch; flex-direction: column; }
+  .chart-toolbar, .chart-legend { grid-template-columns: 1fr; }
   .mobile-tabbar { display: flex; }
 }
 @media (max-width: 480px) {
