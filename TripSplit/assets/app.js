@@ -1305,6 +1305,12 @@ function bindGlobalClicks() {
       return;
     }
 
+    const closeImportTextButton = event.target.closest('[data-close-import-text-modal]');
+    if (closeImportTextButton) {
+      closeImportTextModal();
+      return;
+    }
+
     const openChartZoomButton = event.target.closest('[data-open-chart-zoom]');
     if (openChartZoomButton && typeof openChartZoomModal === 'function') {
       openChartZoomModal(openChartZoomButton.dataset.openChartZoom || 'expense');
@@ -1475,9 +1481,133 @@ function bindExpenseForm() {
   });
 }
 
+// ── 匯入文字品項 Modal ───────────────────────────────────────────────────────
+let importTextItems = []; // 保持 modal 內資料
+
+function openImportTextModal() {
+  const modal = $('#import-text-modal');
+  if (!modal) return;
+  modal.classList.add('show');
+  modal.setAttribute('aria-hidden', 'false');
+  renderImportTextResult();
+}
+
+function closeImportTextModal() {
+  const modal = $('#import-text-modal');
+  if (!modal) return;
+  modal.classList.remove('show');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function parseImportText(raw) {
+  return raw.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.includes('|'))
+    .map(line => {
+      const parts = line.split('|');
+      const date = (parts[0] || '').trim();
+      const title = (parts[1] || '').trim();
+      const amountRaw = (parts[2] || '').trim().replace(/[^0-9.]/g, '');
+      const amount = Number(amountRaw) || 0;
+      return { date, title, amount };
+    })
+    .filter(item => item.title);
+}
+
+function renderImportTextResult() {
+  const section = $('#import-text-result-section');
+  const list = $('#import-text-result-list');
+  if (!section || !list) return;
+  if (!importTextItems.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  list.innerHTML = importTextItems.map((item, idx) => `
+    <div class="import-text-result-row" data-import-idx="${idx}">
+      <div class="import-text-result-info">
+        <span class="import-text-result-date">${escapeHtml(item.date)}</span>
+        <span class="import-text-result-title">${escapeHtml(item.title)}</span>
+        <span class="import-text-result-amount">${item.amount.toLocaleString()}</span>
+      </div>
+      <div class="import-text-result-btns">
+        <button class="btn btn-primary" type="button" data-import-item="${idx}" style="font-size:.82rem;padding:5px 14px;">帶入</button>
+        <button class="btn btn-ghost" type="button" data-remove-import-item="${idx}" style="font-size:.82rem;padding:5px 10px;">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function bindImportTextModal() {
+  $('#open-import-text-btn')?.addEventListener('click', openImportTextModal);
+
+  $('#copy-ai-prompt-btn')?.addEventListener('click', () => {
+    const text = $('#ai-prompt-text')?.textContent || '';
+    navigator.clipboard?.writeText(text).then(() => {
+      const btn = $('#copy-ai-prompt-btn');
+      if (btn) { btn.textContent = '已複製！'; setTimeout(() => { btn.textContent = '複製'; }, 1800); }
+    });
+  });
+
+  $('#parse-import-text-btn')?.addEventListener('click', () => {
+    const raw = $('#import-text-textarea')?.value || '';
+    importTextItems = parseImportText(raw);
+    // clear textarea after parsing, per spec: 匯入新的資料要先清除後再進行導入
+    const ta = $('#import-text-textarea');
+    if (ta) ta.value = '';
+    renderImportTextResult();
+  });
+
+  $('#clear-import-text-btn')?.addEventListener('click', () => {
+    const ta = $('#import-text-textarea');
+    if (ta) ta.value = '';
+    importTextItems = [];
+    renderImportTextResult();
+  });
+
+  $('#import-text-result-list')?.addEventListener('click', (event) => {
+    const importBtn = event.target.closest('[data-import-item]');
+    if (importBtn) {
+      const idx = Number(importBtn.dataset.importItem);
+      const item = importTextItems[idx];
+      if (!item) return;
+      // fill form
+      const titleInput = $('#expense-title');
+      const dateInput = $('#expense-date');
+      const amountInput = $('#amount-original');
+      if (titleInput) titleInput.value = item.title;
+      if (dateInput && item.date) {
+        // try parse date: YYYY/MM/DD or YYYY-MM-DD
+        const normalized = item.date.replace(/\//g, '-');
+        dateInput.value = normalized;
+      }
+      if (amountInput) {
+        amountInput.value = item.amount;
+        updateExchangePreview();
+      }
+      closeImportTextModal();
+      $('#expense-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    const removeBtn = event.target.closest('[data-remove-import-item]');
+    if (removeBtn) {
+      const idx = Number(removeBtn.dataset.removeImportItem);
+      importTextItems.splice(idx, 1);
+      renderImportTextResult();
+    }
+  });
+}
+
+// ── End 匯入文字品項 Modal ───────────────────────────────────────────────────
 function bindKeyboard() {
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
+    if ($('#import-text-modal')?.classList.contains('show')) {
+      closeImportTextModal();
+      return;
+    }
     if ($('#chart-zoom-modal')?.classList.contains('show') && typeof closeChartZoomModal === 'function') {
       closeChartZoomModal();
       return;
@@ -1492,6 +1622,7 @@ function bindAppEvents() {
   bindGlobalClicks();
   bindExpenseForm();
   bindKeyboard();
+  bindImportTextModal();
 }
 
 (async function init() {

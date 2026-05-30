@@ -386,6 +386,93 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); box-sh
 .chart-zoom-wrap { min-height: min(74vh, 820px); }
 #chart-zoom-canvas { display: block; width: 100%; height: min(72vh, 780px); }
 
+/* ── 匯入文字品項 Modal ─────────────────────────────────── */
+.import-text-panel {
+  width: min(96vw, 1500px);
+  max-height: 94vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.import-text-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.import-text-prompt-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.import-text-prompt-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: .88rem;
+  font-weight: 900;
+  color: var(--muted);
+}
+.import-text-prompt-content {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: .84rem;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.7;
+  user-select: all;
+}
+.import-text-input-section { display: flex; flex-direction: column; gap: 10px; }
+.import-text-section-label { font-size: .9rem; font-weight: 950; color: var(--text); }
+.import-text-textarea {
+  width: 100%;
+  min-height: 140px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 12px 14px;
+  font-size: .9rem;
+  resize: vertical;
+  color: var(--text);
+}
+.import-text-textarea:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+.import-text-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.import-text-result-section { display: flex; flex-direction: column; gap: 10px; }
+.import-text-result-list { display: flex; flex-direction: column; gap: 8px; }
+.import-text-result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 10px 14px;
+}
+.import-text-result-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  font-size: .9rem;
+}
+.import-text-result-date { color: var(--muted); font-weight: 800; white-space: nowrap; }
+.import-text-result-title { font-weight: 900; flex: 1; min-width: 0; overflow-wrap: break-word; }
+.import-text-result-amount { color: var(--primary-dark); font-weight: 950; white-space: nowrap; }
+.import-text-result-btns { display: flex; gap: 6px; flex-shrink: 0; }
+/* ── End 匯入文字品項 Modal ─────────────────────────────── */
+
 .mobile-tabbar {
   display: none;
   position: fixed;
