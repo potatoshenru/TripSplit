@@ -1,6 +1,9 @@
 const ROC_DATE_INPUT_SELECTORS = ['#expense-date', '#expense-date-quick', '#expense-filter-from', '#expense-filter-to'];
+
 let activeRocDateInput = null;
 let rocDatePickerViewDate = null;
+let rocDateListenersAttached = false;
+let skipNextRocDatePickerClick = false;
 
 function padDatePart(value) {
     return String(value).padStart(2, '0');
@@ -16,12 +19,14 @@ function getLocalTodayIso() {
 }
 
 function parseIsoDate(value) {
-    const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const match = String(value || '').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (!match) return null;
+
     const year = Number(match[1]);
     const month = Number(match[2]);
     const day = Number(match[3]);
     const date = new Date(year, month - 1, day);
+
     if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
     return { year, month, day, date };
 }
@@ -33,9 +38,8 @@ function parseRocDate(value) {
     const normalized = raw
         .replace(/^民國\s*/i, '')
         .replace(/^roc\s*/i, '')
-        .replace(/[年月.]/g, '/')
+        .replace(/[年月.-]/g, '/')
         .replace(/日/g, '')
-        .replace(/-/g, '/')
         .replace(/\s+/g, '');
     const parts = normalized.split('/').filter(Boolean);
     if (parts.length !== 3) return '';
@@ -56,17 +60,18 @@ function formatRocDate(isoDate) {
 }
 
 function syncRocDateDisplay(input) {
-    if (!input) return;
-    const display = input._rocDisplayInput;
-    if (!display) return;
-    display.value = formatRocDate(input.value);
+    if (!input || !input._rocDisplayInput) return;
+    input._rocDisplayInput.value = formatRocDate(input.value);
 }
 
 function setRocDateValue(input, value, options = {}) {
     if (!input) return;
-    const isoDate = parseIsoDate(value) ? value : parseRocDate(value);
+
+    const parsedIso = parseIsoDate(value);
+    const isoDate = parsedIso ? toIsoDate(parsedIso.year, parsedIso.month, parsedIso.day) : parseRocDate(value);
     input.value = isoDate || '';
     syncRocDateDisplay(input);
+
     if (options.dispatchChange) input.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
@@ -91,11 +96,41 @@ function closeRocDatePicker() {
 function positionRocDatePicker(anchor) {
     const picker = getRocDatePickerElement();
     const rect = anchor.getBoundingClientRect();
-    const pickerWidth = Math.min(300, window.innerWidth - 24);
+    const pickerWidth = Math.min(320, window.innerWidth - 24);
+    const pickerHeight = picker.offsetHeight || 360;
     const left = Math.min(Math.max(12, rect.left), window.innerWidth - pickerWidth - 12);
+    const bottomTop = rect.bottom + 8;
+    const top = bottomTop + pickerHeight > window.innerHeight - 12
+        ? Math.max(12, rect.top - pickerHeight - 8)
+        : bottomTop;
+
     picker.style.width = `${pickerWidth}px`;
     picker.style.left = `${left}px`;
-    picker.style.top = `${Math.min(rect.bottom + 8, window.innerHeight - 20)}px`;
+    picker.style.top = `${top}px`;
+}
+
+function buildRocYearOptions(selectedYear) {
+    const today = new Date();
+    const minYear = Math.min(1912, selectedYear - 20);
+    const maxYear = Math.max(today.getFullYear() + 10, selectedYear + 20);
+    const years = [selectedYear];
+
+    for (let year = selectedYear - 1; year >= minYear; year -= 1) {
+        years.push(year);
+    }
+
+    for (let year = maxYear; year > selectedYear; year -= 1) {
+        years.push(year);
+    }
+
+    return years.map((year) => `<option value="${year}"${year === selectedYear ? ' selected' : ''}>民國 ${year - 1911} 年</option>`).join('');
+}
+
+function buildMonthOptions(selectedMonth) {
+    return Array.from({ length: 12 }, (_, index) => {
+        const month = index + 1;
+        return `<option value="${month}"${month === selectedMonth ? ' selected' : ''}>${padDatePart(month)} 月</option>`;
+    }).join('');
 }
 
 function renderRocDatePicker() {
@@ -113,9 +148,14 @@ function renderRocDatePicker() {
     for (let index = 0; index < 42; index += 1) {
         const cellDate = new Date(start);
         cellDate.setDate(start.getDate() + index);
+
         const isoDate = toIsoDate(cellDate.getFullYear(), cellDate.getMonth() + 1, cellDate.getDate());
         const isOtherMonth = cellDate.getMonth() !== month;
-        const isSelected = selected && selected.year === cellDate.getFullYear() && selected.month === cellDate.getMonth() + 1 && selected.day === cellDate.getDate();
+        const isSelected = selected
+            && selected.year === cellDate.getFullYear()
+            && selected.month === cellDate.getMonth() + 1
+            && selected.day === cellDate.getDate();
+
         cells.push(`
             <button class="roc-date-day${isOtherMonth ? ' muted' : ''}${isSelected ? ' selected' : ''}${isoDate === todayIso ? ' today' : ''}" type="button" data-roc-date="${isoDate}">
                 ${cellDate.getDate()}
@@ -125,9 +165,12 @@ function renderRocDatePicker() {
 
     picker.innerHTML = `
         <div class="roc-date-picker-head">
-            <button class="roc-date-nav" type="button" data-roc-date-prev aria-label="上個月">‹</button>
-            <strong>民國${year - 1911}年${padDatePart(month + 1)}月</strong>
-            <button class="roc-date-nav" type="button" data-roc-date-next aria-label="下個月">›</button>
+            <button class="roc-date-nav" type="button" data-roc-date-prev aria-label="上個月">&lsaquo;</button>
+            <div class="roc-date-title">
+                <select data-roc-date-year aria-label="選擇年份">${buildRocYearOptions(year)}</select>
+                <select data-roc-date-month aria-label="選擇月份">${buildMonthOptions(month + 1)}</select>
+            </div>
+            <button class="roc-date-nav" type="button" data-roc-date-next aria-label="下個月">&rsaquo;</button>
         </div>
         <div class="roc-date-weekdays" aria-hidden="true">
             <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
@@ -138,21 +181,110 @@ function renderRocDatePicker() {
             <button type="button" data-roc-date-today>今天</button>
         </div>
     `;
+
     picker.classList.add('show');
     positionRocDatePicker(activeRocDateInput._rocControl || activeRocDateInput._rocDisplayInput);
 }
 
 function openRocDatePicker(input) {
     if (!input) return;
+
     activeRocDateInput = input;
     const parsed = parseIsoDate(input.value) || parseIsoDate(getLocalTodayIso());
     rocDatePickerViewDate = new Date(parsed.year, parsed.month - 1, 1);
     renderRocDatePicker();
 }
 
+function handleRocDatePickerAction(event) {
+    const prev = event.target.closest('[data-roc-date-prev]');
+    const next = event.target.closest('[data-roc-date-next]');
+    const day = event.target.closest('[data-roc-date]');
+    const clear = event.target.closest('[data-roc-date-clear]');
+    const today = event.target.closest('[data-roc-date-today]');
+
+    if ((prev || next) && rocDatePickerViewDate) {
+        rocDatePickerViewDate.setMonth(rocDatePickerViewDate.getMonth() + (next ? 1 : -1));
+        renderRocDatePicker();
+        return true;
+    }
+
+    if (day && activeRocDateInput) {
+        setRocDateValue(activeRocDateInput, day.dataset.rocDate, { dispatchChange: true });
+        closeRocDatePicker();
+        return true;
+    }
+
+    if (clear && activeRocDateInput) {
+        setRocDateValue(activeRocDateInput, '', { dispatchChange: true });
+        closeRocDatePicker();
+        return true;
+    }
+
+    if (today && activeRocDateInput) {
+        setRocDateValue(activeRocDateInput, getLocalTodayIso(), { dispatchChange: true });
+        closeRocDatePicker();
+        return true;
+    }
+
+    return false;
+}
+
+function attachRocDatePickerListeners() {
+    if (rocDateListenersAttached) return;
+    rocDateListenersAttached = true;
+
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target.closest('.roc-date-picker') || target.closest('.roc-date-control')) return;
+        closeRocDatePicker();
+    });
+
+    getRocDatePickerElement().addEventListener('mousedown', (event) => {
+        if (event.target.closest('[data-roc-date-year], [data-roc-date-month]')) return;
+
+        if (handleRocDatePickerAction(event)) {
+            event.preventDefault();
+            skipNextRocDatePickerClick = true;
+        }
+    });
+
+    getRocDatePickerElement().addEventListener('click', (event) => {
+        if (skipNextRocDatePickerClick) {
+            skipNextRocDatePickerClick = false;
+            return;
+        }
+
+        handleRocDatePickerAction(event);
+    });
+
+    getRocDatePickerElement().addEventListener('change', (event) => {
+        if (!rocDatePickerViewDate) return;
+
+        const yearSelect = event.target.closest('[data-roc-date-year]');
+        const monthSelect = event.target.closest('[data-roc-date-month]');
+        if (!yearSelect && !monthSelect) return;
+
+        const picker = getRocDatePickerElement();
+        const year = Number((yearSelect || picker.querySelector('[data-roc-date-year]')).value);
+        const month = Number((monthSelect || picker.querySelector('[data-roc-date-month]')).value);
+
+        if (!Number.isFinite(year) || !Number.isFinite(month)) return;
+        rocDatePickerViewDate = new Date(year, month - 1, 1);
+        renderRocDatePicker();
+    });
+
+    window.addEventListener('resize', () => {
+        if (activeRocDateInput) renderRocDatePicker();
+    });
+
+    window.addEventListener('scroll', () => {
+        if (activeRocDateInput) positionRocDatePicker(activeRocDateInput._rocControl || activeRocDateInput._rocDisplayInput);
+    }, true);
+}
+
 function enhanceRocDateInputs() {
     ROC_DATE_INPUT_SELECTORS.forEach((selector) => {
-        const input = $(selector);
+        const input = document.querySelector(selector);
         if (!input || input.dataset.rocEnhanced === 'true') return;
 
         input.dataset.rocEnhanced = 'true';
@@ -187,7 +319,7 @@ function enhanceRocDateInputs() {
         display.addEventListener('blur', () => {
             window.setTimeout(() => {
                 if (!document.querySelector('.roc-date-picker:hover')) setRocDateValue(input, display.value, { dispatchChange: true });
-            }, 120);
+            }, 150);
         });
         button.addEventListener('click', () => {
             display.focus();
@@ -196,47 +328,5 @@ function enhanceRocDateInputs() {
         input.addEventListener('change', () => syncRocDateDisplay(input));
     });
 
-    document.addEventListener('click', (event) => {
-        const target = event.target;
-        if (target.closest('.roc-date-picker') || target.closest('.roc-date-control')) return;
-        closeRocDatePicker();
-    });
-
-    getRocDatePickerElement().addEventListener('click', (event) => {
-        const prev = event.target.closest('[data-roc-date-prev]');
-        const next = event.target.closest('[data-roc-date-next]');
-        const day = event.target.closest('[data-roc-date]');
-        const clear = event.target.closest('[data-roc-date-clear]');
-        const today = event.target.closest('[data-roc-date-today]');
-
-        if (prev || next) {
-            rocDatePickerViewDate.setMonth(rocDatePickerViewDate.getMonth() + (next ? 1 : -1));
-            renderRocDatePicker();
-            return;
-        }
-
-        if (day && activeRocDateInput) {
-            setRocDateValue(activeRocDateInput, day.dataset.rocDate, { dispatchChange: true });
-            closeRocDatePicker();
-            return;
-        }
-
-        if (clear && activeRocDateInput) {
-            setRocDateValue(activeRocDateInput, '', { dispatchChange: true });
-            closeRocDatePicker();
-            return;
-        }
-
-        if (today && activeRocDateInput) {
-            setRocDateValue(activeRocDateInput, getLocalTodayIso(), { dispatchChange: true });
-            closeRocDatePicker();
-        }
-    });
-
-    window.addEventListener('resize', () => {
-        if (activeRocDateInput) renderRocDatePicker();
-    });
-    window.addEventListener('scroll', () => {
-        if (activeRocDateInput) positionRocDatePicker(activeRocDateInput._rocControl || activeRocDateInput._rocDisplayInput);
-    }, true);
+    attachRocDatePickerListeners();
 }

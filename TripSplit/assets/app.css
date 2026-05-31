@@ -490,34 +490,34 @@ input:focus, select:focus, textarea:focus {
     transform: translateY(-50%);
 }
 
-.roc-date-button::before {
-    content: "";
-    width: 18px;
-    height: 18px;
-    display: block;
-    margin: 0 auto;
-    border: 2px solid currentColor;
-    border-radius: 5px;
-    box-shadow: inset 0 5px 0 rgba(181, 111, 24, .18);
-}
+    .roc-date-button::before {
+        content: "";
+        width: 18px;
+        height: 18px;
+        display: block;
+        margin: 0 auto;
+        border: 2px solid currentColor;
+        border-radius: 5px;
+        box-shadow: inset 0 5px 0 rgba(181, 111, 24, .18);
+    }
 
-.roc-date-button::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 10px;
-    width: 12px;
-    height: 2px;
-    border-radius: 999px;
-    background: currentColor;
-    transform: translateX(-50%);
-}
+    .roc-date-button::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 10px;
+        width: 12px;
+        height: 2px;
+        border-radius: 999px;
+        background: currentColor;
+        transform: translateX(-50%);
+    }
 
-.roc-date-button:hover,
-.roc-date-button:focus-visible {
-    background: var(--primary-soft);
-    outline: none;
-}
+    .roc-date-button:hover,
+    .roc-date-button:focus-visible {
+        background: var(--primary-soft);
+        outline: none;
+    }
 
 .roc-date-picker {
     position: fixed;
@@ -530,9 +530,9 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0 18px 44px rgba(65, 42, 20, .22);
 }
 
-.roc-date-picker.show {
-    display: block;
-}
+    .roc-date-picker.show {
+        display: block;
+    }
 
 .roc-date-picker-head {
     display: grid;
@@ -542,12 +542,29 @@ input:focus, select:focus, textarea:focus {
     margin-bottom: 10px;
 }
 
-.roc-date-picker-head strong {
-    text-align: center;
-    color: var(--text);
-    font-size: .98rem;
-    line-height: 1.2;
+    .roc-date-picker-head strong {
+        text-align: center;
+        color: var(--text);
+        font-size: .98rem;
+        line-height: 1.2;
+    }
+
+.roc-date-title {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+    gap: 6px;
+    min-width: 0;
 }
+
+    .roc-date-title select {
+        min-height: 36px;
+        height: 36px;
+        padding: 6px 8px;
+        border-radius: 11px;
+        background: #fffaf2;
+        font-size: .88rem;
+        font-weight: 900;
+    }
 
 .roc-date-nav {
     width: 36px;
@@ -584,20 +601,20 @@ input:focus, select:focus, textarea:focus {
     font-weight: 800;
 }
 
-.roc-date-day:hover,
-.roc-date-day.today {
-    background: var(--primary-soft);
-    color: var(--primary-dark);
-}
+    .roc-date-day:hover,
+    .roc-date-day.today {
+        background: var(--primary-soft);
+        color: var(--primary-dark);
+    }
 
-.roc-date-day.selected {
-    background: var(--text);
-    color: #fff;
-}
+    .roc-date-day.selected {
+        background: var(--text);
+        color: #fff;
+    }
 
-.roc-date-day.muted {
-    color: #9b8b7c;
-}
+    .roc-date-day.muted {
+        color: #9b8b7c;
+    }
 
 .roc-date-actions {
     display: flex;
@@ -606,18 +623,18 @@ input:focus, select:focus, textarea:focus {
     margin-top: 10px;
 }
 
-.roc-date-actions button {
-    min-height: 34px;
-    padding: 6px 10px;
-    border-radius: 11px;
-    background: transparent;
-    color: var(--primary-dark);
-    font-weight: 950;
-}
+    .roc-date-actions button {
+        min-height: 34px;
+        padding: 6px 10px;
+        border-radius: 11px;
+        background: transparent;
+        color: var(--primary-dark);
+        font-weight: 950;
+    }
 
-.roc-date-actions button:hover {
-    background: var(--primary-soft);
-}
+        .roc-date-actions button:hover {
+            background: var(--primary-soft);
+        }
 
 .native-icon-select {
     position: absolute;
