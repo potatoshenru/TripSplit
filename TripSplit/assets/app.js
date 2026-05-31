@@ -70,6 +70,10 @@ const money = new Intl.NumberFormat('zh-TW');
 const $ = (selector) => document.querySelector(selector);
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+function formatTwd(value) {
+    return `NT$ ${money.format(Math.round(Math.abs(Number(value || 0))))}`;
+}
+
 function getStoredTripModifiedTimes() {
     try {
         return JSON.parse(localStorage.getItem('tripsplit_trip_modified_at') || '{}') || {};
@@ -729,32 +733,73 @@ function renderBalancesAndSettlements() {
 
     const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
     const totalOwed = balanceRows.reduce((sum, item) => sum + Number(item.owed || 0), 0);
+    const unallocated = Math.max(0, Math.round(total) - Math.round(totalOwed));
+    const suggestions = buildSettlementSuggestions(balanceRows);
+    const balanceHeader = $('#balances .card-title h2');
+    const balanceIntro = $('#balances .card-title p');
+    const settlementCard = $('#settlements');
+
+    if (balanceHeader) balanceHeader.textContent = '\u500b\u4eba\u6536\u652f\u5e73\u8861';
+    if (balanceIntro) balanceIntro.textContent = '\u5feb\u901f\u78ba\u8a8d\u8ab0\u61c9\u6536\u3001\u8ab0\u61c9\u4ed8\uff0c\u4ee5\u53ca\u5efa\u8b70\u5982\u4f55\u7d50\u6e05\u3002';
+    if (settlementCard) settlementCard.hidden = true;
 
     const memberCards = balanceRows.map(item => {
-        const sign = item.balance >= 0 ? '+' : '-';
-        const amount = money.format(Math.abs(item.balance));
+        const status = item.balance > 0 ? '\u61c9\u6536' : item.balance < 0 ? '\u61c9\u4ed8' : '\u5df2\u5e73\u8861';
         const className = item.balance > 0 ? 'positive' : item.balance < 0 ? 'negative' : 'neutral';
-        return `<div class="balance-card">
-            <span class="balance-person-name">${escapeHtml(item.name)}</span>
-            <strong class="${className}">${sign} NT$ ${amount}</strong>
-            <div class="balance-breakdown">
-                <small>個人消費 NT$ ${money.format(item.owed)}</small>
-                <small>已付 NT$ ${money.format(item.paid)}</small>
+        return `<article class="balance-card balance-person-card ${className}" tabindex="0">
+            <div class="balance-person-head">
+                <span class="balance-person-name">${escapeHtml(item.name)}</span>
+                <span class="balance-status-badge ${className}">${status}</span>
             </div>
-        </div>`;
+            <strong class="balance-main-amount">${status} ${formatTwd(item.balance)}</strong>
+            <div class="balance-breakdown">
+                <small><span>\u500b\u4eba\u65c5\u904a\u82b1\u8cbb</span><strong>${formatTwd(item.owed)}</strong></small>
+                <small><span>\u5df2\u4ed8\u6b3e / \u5df2\u588a\u4ed8</span><strong>${formatTwd(item.paid)}</strong></small>
+            </div>
+        </article>`;
     }).join('');
 
-    balanceGrid.innerHTML = memberCards
-        + `<div class="balance-card"><span>已記錄支出</span><strong class="neutral">${expenses.length} 筆</strong></div>`
-        + `<div class="balance-card"><span>總支出</span><strong class="neutral">NT$ ${money.format(Math.round(total))}</strong></div>`
-        + `<div class="balance-card"><span>已分攤總額</span><strong class="neutral">NT$ ${money.format(Math.round(totalOwed))}</strong></div>`;
+    const paymentRows = suggestions.length
+        ? suggestions.map(item => `<div class="suggested-payment-row" data-balance-amount="${item.amount}">
+            <div class="settlement-route" aria-label="${escapeHtml(item.from)} \u4ed8\u6b3e\u7d66 ${escapeHtml(item.to)}">
+                <span>${escapeHtml(item.from)}</span>
+                <span class="arrow" aria-hidden="true">&rarr;</span>
+                <span>${escapeHtml(item.to)}</span>
+            </div>
+            <strong>${formatTwd(item.amount)}</strong>
+        </div>`).join('')
+        : '<p class="field-hint">\u76ee\u524d\u6bcf\u500b\u4eba\u90fd\u5df2\u5e73\u8861\uff0c\u7121\u9700\u8f49\u5e33\u3002</p>';
 
-    const suggestions = buildSettlementSuggestions(balanceRows);
+    balanceGrid.innerHTML = `
+        <section class="balance-section suggested-payments-section" aria-labelledby="suggested-payments-title">
+            <div class="balance-section-head">
+                <h3 id="suggested-payments-title">\u5efa\u8b70\u4ed8\u6b3e</h3>
+                <p>\u4f9d\u76ee\u524d\u9918\u984d\u5b8c\u6210\u4ee5\u4e0b\u8f49\u5e33\u5373\u53ef\u7d50\u6e05\u3002</p>
+            </div>
+            <div class="suggested-payment-list">${paymentRows}</div>
+        </section>
+        <section class="balance-section" aria-labelledby="member-balances-title">
+            <div class="balance-section-head">
+                <h3 id="member-balances-title">\u6bcf\u500b\u4eba\u7684\u6536\u652f</h3>
+            </div>
+            <div class="balance-member-grid">${memberCards}</div>
+        </section>
+        <section class="balance-section" aria-labelledby="balance-stats-title">
+            <div class="balance-section-head">
+                <h3 id="balance-stats-title">\u7d71\u8a08\u6458\u8981</h3>
+            </div>
+            <div class="balance-stat-grid">
+                <article class="balance-stat-card"><span>\u7e3d\u652f\u51fa</span><strong>${formatTwd(total)}</strong></article>
+                <article class="balance-stat-card"><span>\u5206\u6524\u72c0\u614b</span><strong>${unallocated === 0 ? '\u5df2\u5168\u6578\u5206\u6524' : `\u672a\u5206\u6524 ${formatTwd(unallocated)}`}</strong><small>\u5df2\u5206\u6524\u7e3d\u984d ${formatTwd(totalOwed)}</small></article>
+                <article class="balance-stat-card"><span>\u5df2\u8a18\u9304\u652f\u51fa</span><strong>${expenses.length} \u7b46</strong></article>
+            </div>
+        </section>
+    `;
+
     settlementList.innerHTML = suggestions.length
-        ? suggestions.map(item => `<div class="settlement-item"><div class="settlement-route"><span>${item.from}</span><span class="arrow">→</span><span>${item.to}</span></div><strong>NT$ ${money.format(item.amount)}</strong></div>`).join('')
-        : '<p class="field-hint">目前已接近平衡，暫無建議轉帳。</p>';
+        ? suggestions.map(item => `<div class="settlement-item"><div class="settlement-route"><span>${escapeHtml(item.from)}</span><span class="arrow">&rarr;</span><span>${escapeHtml(item.to)}</span></div><strong>${formatTwd(item.amount)}</strong></div>`).join('')
+        : '<p class="field-hint">\u76ee\u524d\u6bcf\u500b\u4eba\u90fd\u5df2\u5e73\u8861\uff0c\u7121\u9700\u8f49\u5e33\u3002</p>';
 }
-
 function updateExchangePreview() {
     const currency = $('#expense-currency').value;
     const amount = Number($('#amount-original').value || 0);

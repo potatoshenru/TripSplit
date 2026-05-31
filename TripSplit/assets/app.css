@@ -5,13 +5,13 @@
     --surface-strong: #fff4df;
     --surface-soft: #fff8ec;
     --text: #251b12;
-    --muted: #7a6a5b;
+    --muted: #62513f;
     --line: #e7d8c2;
     --primary: #b56f18;
     --primary-dark: #77420d;
     --primary-soft: #fff0cf;
-    --green: #557f3f;
-    --red: #b84a3d;
+    --green: #356f31;
+    --red: #a33b31;
     --orange: #c76f2d;
     --shadow: 0 18px 44px rgba(65, 42, 20, 0.1);
     --shadow-soft: 0 10px 26px rgba(65, 42, 20, 0.07);
@@ -456,6 +456,13 @@ input:focus, select:focus, textarea:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 4px rgba(181, 111, 24, .14);
     background: #fff;
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+    outline: 3px solid rgba(119, 66, 13, .58);
+    outline-offset: 3px;
 }
 
 .input-with-action {
@@ -1389,6 +1396,179 @@ input:focus, select:focus, textarea:focus {
     color: var(--primary-dark);
 }
 
+#balance-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+}
+
+.side-stack #balance-grid {
+    grid-template-columns: 1fr;
+}
+
+.balance-section {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.balance-section + .balance-section {
+    padding-top: 2px;
+}
+
+.balance-section-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.balance-section-head h3 {
+    color: var(--text);
+    font-size: .98rem;
+    line-height: 1.25;
+    font-weight: 950;
+}
+
+.balance-section-head p {
+    color: var(--muted);
+    font-size: .9rem;
+    font-weight: 800;
+}
+
+.suggested-payment-list {
+    display: grid;
+    gap: 10px;
+}
+
+.suggested-payment-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid #d6b07b;
+    border-radius: 16px;
+    background: #fff8ec;
+}
+
+.suggested-payment-row strong {
+    color: var(--primary-dark);
+    font-size: 1.04rem;
+    font-weight: 950;
+    white-space: nowrap;
+}
+
+.balance-member-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.balance-person-card {
+    display: grid;
+    gap: 12px;
+    min-height: 184px;
+    transition: box-shadow .2s ease, transform .2s ease, border-color .2s ease;
+}
+
+.balance-person-card:hover,
+.balance-person-card:focus-visible {
+    border-color: #d6b07b;
+    box-shadow: 0 14px 30px rgba(65, 42, 20, .12);
+    transform: translateY(-1px);
+}
+
+.balance-person-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.balance-status-badge {
+    flex: 0 0 auto;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    font-size: .78rem;
+    font-weight: 950;
+    line-height: 1.2;
+}
+
+.balance-status-badge.positive {
+    color: var(--green);
+    background: #edf7ea;
+}
+
+.balance-status-badge.negative {
+    color: var(--red);
+    background: #fff0ed;
+}
+
+.balance-status-badge.neutral {
+    color: var(--primary-dark);
+    background: var(--primary-soft);
+}
+
+.balance-main-amount {
+    align-self: center;
+}
+
+.balance-breakdown small {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.balance-breakdown small span,
+.balance-stat-card span {
+    color: var(--muted);
+    font-weight: 850;
+}
+
+.balance-breakdown small strong {
+    margin: 0;
+    color: var(--text);
+    font-size: .95rem;
+    white-space: nowrap;
+}
+
+.balance-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.balance-stat-card {
+    min-width: 0;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: #fffdf8;
+}
+
+.balance-stat-card span,
+.balance-stat-card small {
+    display: block;
+    font-size: .86rem;
+}
+
+.balance-stat-card strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--primary-dark);
+    font-size: 1.12rem;
+    font-weight: 950;
+    line-height: 1.25;
+}
+
+.balance-stat-card small {
+    margin-top: 3px;
+    color: var(--muted);
+    font-weight: 800;
+}
+
 .chart-card-body {
     display: grid;
     gap: 14px;
@@ -2132,6 +2312,11 @@ input:focus, select:focus, textarea:focus {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .balance-member-grid,
+    .balance-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .mobile-tabbar {
         display: flex;
     }
@@ -2181,6 +2366,17 @@ input:focus, select:focus, textarea:focus {
     .settlement-item {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .balance-section-head,
+    .suggested-payment-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .balance-member-grid,
+    .balance-stat-grid {
+        grid-template-columns: 1fr;
     }
 
     .expense-item {
