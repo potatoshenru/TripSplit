@@ -16,8 +16,8 @@
  * 6. 部署成 Web App
  */
 
-const SPREADSHEET_ID = '1Ay8Hq0IdggCA_zGQn8lWVHpLpeqQiaSpLPs6kx5wsD0';
-const RECEIPT_FOLDER_ID = '1Mig5ad5Ie5dD5odk7-0eZKQCeBuq3B8i';
+const SPREADSHEET_ID = '1vbdw48vV8-lETLO1bdzc1wH3OMJcn_2GuPxafFJexu4';
+const RECEIPT_FOLDER_ID = '1cflyICWeN6psWIM5xhJnTzKRLDbpxg9b';
 
 const SHEET_NAMES = {
   trips: 'trips',
@@ -46,6 +46,8 @@ function getHandlers_() {
     addMember: addMember,
     deleteMember: deleteMember,
     addExpense: addExpense,
+    updateExpense: updateExpense,
+    deleteExpense: deleteExpense,
     getExpenses: getExpenses,
     syncExchangeRates: syncExchangeRates,
     ping: function () {
@@ -146,7 +148,8 @@ function setupSheets() {
     [SHEET_NAMES.expenses]: [
       'expense_id', 'trip_id', 'title', 'payer_member_name', 'category_id', 'category_name',
       'payment_method_id', 'payment_method_name', 'expense_date', 'amount_original',
-      'original_currency', 'exchange_rate_to_twd', 'amount_twd', 'split_type', 'note', 'created_at'
+      'original_currency', 'exchange_rate_to_twd', 'amount_twd', 'split_type', 'note', 'created_at',
+      'updated_at', 'is_deleted', 'deleted_at'
     ],
     [SHEET_NAMES.receipts]: [
       'receipt_id', 'expense_id', 'file_name', 'mime_type', 'drive_file_id', 'drive_url', 'created_at'
@@ -321,7 +324,8 @@ function getInitialData(payload) {
     paymentMethods: findRows(SHEET_NAMES.paymentMethods, { trip_id: tripId, is_active: true }),
     exchangeRates: getLatestRates(),
     expenses: expenses,
-    expenseReceipts: getReceiptsByExpenseIds(expenses.map(function(item) { return item.expense_id; }))
+    expenseReceipts: getReceiptsByExpenseIds(expenses.map(function(item) { return item.expense_id; })),
+    expenseParticipants: getParticipantsByExpenseIds(expenses.map(function(item) { return item.expense_id; }))
   };
 }
 
@@ -415,11 +419,72 @@ function addExpense(payload) {
     amount_twd: amountTwd,
     split_type: payload.split_type || '平均分',
     note: payload.note || '',
-    created_at: now
+    created_at: now,
+    updated_at: now,
+    is_deleted: false,
+    deleted_at: ''
   };
 
   appendObject(SHEET_NAMES.expenses, expenseRow);
 
+  writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd, rate, now);
+
+  const uploadedReceipts = uploadReceiptFiles(expenseId, payload.receipts || []);
+
+  return {
+    expense: expenseRow,
+    receipts: uploadedReceipts
+  };
+}
+
+function updateExpense(payload) {
+  const expenseId = required(payload.expense_id, 'expense_id');
+  const tripId = payload.trip_id || 'trip_default';
+  const currency = required(payload.original_currency, 'original_currency');
+  const amountOriginal = Number(required(payload.amount_original, 'amount_original'));
+  const rate = Number(payload.exchange_rate_to_twd || getRateToTwd(currency));
+  const amountTwd = Math.round(amountOriginal * rate);
+  const now = new Date();
+
+  const category = findFirst(SHEET_NAMES.categories, {
+    category_id: required(payload.category_id, 'category_id')
+  });
+
+  const paymentMethod = findFirst(SHEET_NAMES.paymentMethods, {
+    payment_method_id: required(payload.payment_method_id, 'payment_method_id')
+  });
+
+  const updatedRow = updateObjectById_(SHEET_NAMES.expenses, 'expense_id', expenseId, {
+    trip_id: tripId,
+    title: required(payload.title, 'title'),
+    payer_member_name: required(payload.payer_member_name, 'payer_member_name'),
+    category_id: payload.category_id,
+    category_name: category ? category.category_name : payload.category_name || '',
+    payment_method_id: payload.payment_method_id,
+    payment_method_name: paymentMethod ? paymentMethod.payment_method_name : payload.payment_method_name || '',
+    expense_date: payload.expense_date || '',
+    amount_original: amountOriginal,
+    original_currency: currency,
+    exchange_rate_to_twd: rate,
+    amount_twd: amountTwd,
+    split_type: payload.split_type || '平均分',
+    note: payload.note || '',
+    updated_at: now
+  });
+
+  deleteRowsByColumnValue_(SHEET_NAMES.participants, 'expense_id', expenseId);
+  writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd, rate, now);
+
+  return {
+    expense: updatedRow
+  };
+}
+
+function deleteExpense(payload) {
+  return softDeleteExpenseById_(required(payload.expense_id, 'expense_id'));
+}
+
+function writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd, rate, now) {
   const participantNames = (payload.participants || []).map(function(participant) {
     return participant && participant.member_name ? participant.member_name : participant;
   }).filter(function(name) {
@@ -465,18 +530,13 @@ function addExpense(payload) {
       created_at: now
     });
   });
-
-  const uploadedReceipts = uploadReceiptFiles(expenseId, payload.receipts || []);
-
-  return {
-    expense: expenseRow,
-    receipts: uploadedReceipts
-  };
 }
 
 function getExpenses(payload) {
   const tripId = payload.trip_id || 'trip_default';
-  return findRows(SHEET_NAMES.expenses, { trip_id: tripId }).reverse();
+  return findRows(SHEET_NAMES.expenses, { trip_id: tripId }).filter(function(row) {
+    return String(row.is_deleted).toLowerCase() !== 'true';
+  }).reverse();
 }
 
 function getReceiptsByExpenseIds(expenseIds) {
@@ -489,6 +549,20 @@ function getReceiptsByExpenseIds(expenseIds) {
   if (!Object.keys(idSet).length) return [];
 
   return getObjects(SHEET_NAMES.receipts).filter(function(row) {
+    return idSet[String(row.expense_id)];
+  });
+}
+
+function getParticipantsByExpenseIds(expenseIds) {
+  const idSet = {};
+  (expenseIds || []).forEach(function(id) {
+    if (!id) return;
+    idSet[String(id)] = true;
+  });
+
+  if (!Object.keys(idSet).length) return [];
+
+  return getObjects(SHEET_NAMES.participants).filter(function(row) {
     return idSet[String(row.expense_id)];
   });
 }
@@ -649,6 +723,54 @@ function findFirst(sheetName, criteria) {
   return findRows(sheetName, criteria)[0] || null;
 }
 
+function updateObjectById_(sheetName, idColumn, id, updates) {
+  const target = sheet(sheetName);
+  ensureSheetColumns_(target, Object.keys(updates));
+  const values = target.getDataRange().getValues();
+  const headers = values[0];
+  const idIndex = headers.indexOf(idColumn);
+
+  if (idIndex === -1) {
+    throw new Error(`Missing ${idColumn} column in ${sheetName}.`);
+  }
+
+  for (let rowIndex = 1; rowIndex < values.length; rowIndex++) {
+    if (String(values[rowIndex][idIndex]) !== String(id)) continue;
+
+    Object.keys(updates).forEach(function(key) {
+      const columnIndex = headers.indexOf(key);
+      if (columnIndex === -1) return;
+      target.getRange(rowIndex + 1, columnIndex + 1).setValue(updates[key]);
+      values[rowIndex][columnIndex] = updates[key];
+    });
+
+    const object = {};
+    headers.forEach(function(header, index) {
+      object[header] = values[rowIndex][index];
+    });
+    return object;
+  }
+
+  throw new Error(`Cannot find ${idColumn}: ${id}`);
+}
+
+function ensureSheetColumns_(target, columnNames) {
+  let headers = getHeaders(target);
+  const missing = (columnNames || []).filter(function(name) {
+    return name && headers.indexOf(name) === -1;
+  });
+
+  if (!missing.length) return headers;
+
+  const startColumn = target.getLastColumn() + 1;
+  if (target.getMaxColumns() < startColumn + missing.length - 1) {
+    target.insertColumnsAfter(target.getMaxColumns(), startColumn + missing.length - 1 - target.getMaxColumns());
+  }
+  target.getRange(1, startColumn, 1, missing.length).setValues([missing]);
+  headers = getHeaders(target);
+  return headers;
+}
+
 function softDeleteById(sheetName, idColumn, id) {
   const target = sheet(sheetName);
   const values = target.getDataRange().getValues();
@@ -668,6 +790,52 @@ function softDeleteById(sheetName, idColumn, id) {
   }
 
   return { deleted: false, id };
+}
+
+function softDeleteExpenseById_(id) {
+  const target = sheet(SHEET_NAMES.expenses);
+  ensureSheetColumns_(target, ['updated_at', 'is_deleted', 'deleted_at']);
+  const values = target.getDataRange().getValues();
+  const headers = values[0];
+  const idIndex = headers.indexOf('expense_id');
+  const deletedIndex = headers.indexOf('is_deleted');
+  const deletedAtIndex = headers.indexOf('deleted_at');
+  const updatedAtIndex = headers.indexOf('updated_at');
+
+  if (idIndex === -1 || deletedIndex === -1) {
+    throw new Error('Missing expense_id or is_deleted column in ' + SHEET_NAMES.expenses + '. Run setupSheets() once.');
+  }
+
+  for (let rowIndex = 1; rowIndex < values.length; rowIndex++) {
+    if (String(values[rowIndex][idIndex]) === String(id)) {
+      const now = new Date();
+      target.getRange(rowIndex + 1, deletedIndex + 1).setValue(true);
+      if (deletedAtIndex !== -1) target.getRange(rowIndex + 1, deletedAtIndex + 1).setValue(now);
+      if (updatedAtIndex !== -1) target.getRange(rowIndex + 1, updatedAtIndex + 1).setValue(now);
+      return { deleted: true, id };
+    }
+  }
+
+  return { deleted: false, id };
+}
+
+function deleteRowsByColumnValue_(sheetName, columnName, value) {
+  const target = sheet(sheetName);
+  const values = target.getDataRange().getValues();
+  if (values.length <= 1) return 0;
+
+  const headers = values[0];
+  const columnIndex = headers.indexOf(columnName);
+  if (columnIndex === -1) return 0;
+
+  let deleted = 0;
+  for (let rowIndex = values.length - 1; rowIndex >= 1; rowIndex--) {
+    if (String(values[rowIndex][columnIndex]) === String(value)) {
+      target.deleteRow(rowIndex + 1);
+      deleted += 1;
+    }
+  }
+  return deleted;
 }
 
 function required(value, name) {

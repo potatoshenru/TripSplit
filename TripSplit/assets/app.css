@@ -1200,6 +1200,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .expense-item {
+    position: relative;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 14px;
@@ -1208,6 +1209,28 @@ input:focus, select:focus, textarea:focus {
     border: 1px solid var(--line);
     border-radius: 21px;
     background: var(--surface-strong);
+}
+
+.expense-edit-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid #e6c58d;
+    background: #fff6e6;
+    color: var(--primary-dark);
+    font-size: .78rem;
+    font-weight: 950;
+    line-height: 1;
+    box-shadow: 0 8px 18px rgba(125, 82, 28, .12);
+}
+
+.expense-edit-badge:hover {
+    background: #ffe7b9;
 }
 
 .expense-icon {
@@ -1246,6 +1269,7 @@ input:focus, select:focus, textarea:focus {
 .expense-amount {
     text-align: right;
     white-space: nowrap;
+    padding-right: 38px;
 }
 
     .expense-amount strong {
@@ -1560,6 +1584,55 @@ input:focus, select:focus, textarea:focus {
 .receipt-modal-actions {
     display: flex;
     justify-content: flex-end;
+}
+
+.expense-edit-panel {
+    width: min(94vw, 860px);
+    max-height: 92vh;
+    overflow-y: auto;
+}
+
+.expense-edit-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.expense-edit-header h2 {
+    font-size: 1.15rem;
+    font-weight: 950;
+}
+
+.expense-edit-header p {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: .88rem;
+}
+
+.expense-edit-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.expense-edit-actions > div {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.btn.danger {
+    border-color: rgba(184, 74, 61, .35);
+    color: var(--red);
+    background: #fff1ee;
+}
+
+.btn.danger:hover {
+    background: #ffe0da;
 }
 
 .chart-zoom-panel {

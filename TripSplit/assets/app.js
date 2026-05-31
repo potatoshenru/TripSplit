@@ -29,6 +29,7 @@ let categories = [];
 let paymentMethods = [];
 let expenses = [];
 let expenseReceipts = [];
+let expenseParticipants = [];
 let selectedReceiptFiles = [];
 let exchangeRates = { JPY: 0.2185, USD: 32.1, KRW: 0.0235, EUR: 34.8, THB: 0.88, TWD: 1 };
 
@@ -284,16 +285,19 @@ function normalizeRates(rowsOrObject) {
     return { ...exchangeRates, ...rates };
 }
 
-function normalizeExpenses(rows, receiptRows = []) {
+function normalizeExpenses(rows, receiptRows = [], participantRows = []) {
     return rows.map(row => {
         const category = categories.find(item => item.id === row.category_id || item.name === row.category_name);
         const expenseId = row.expense_id || row.id || '';
         const relatedReceipts = receiptRows.filter(item => (item.expense_id || '') === expenseId);
+        const relatedParticipants = participantRows.filter(item => (item.expense_id || '') === expenseId);
 
         return {
             id: expenseId,
             title: row.title || row.expense_title || '未命名支出',
             icon: category ? category.icon : '🧾',
+            categoryId: row.category_id || (category ? category.id : ''),
+            paymentMethodId: row.payment_method_id || '',
             payer: row.payer_member_name || row.payer || '',
             category: row.category_name || (category ? category.name : ''),
             payment: row.payment_method_name || row.payment || '',
@@ -303,6 +307,15 @@ function normalizeExpenses(rows, receiptRows = []) {
             rate: Number(row.exchange_rate_to_twd || row.rate || 1),
             twd: Number(row.amount_twd || 0),
             split: row.split_type || '平均分',
+            note: row.note || '',
+            createdAt: row.created_at || '',
+            updatedAt: row.updated_at || '',
+            participants: relatedParticipants.map(item => item.member_name).filter(Boolean),
+            splitDetails: relatedParticipants.map(item => ({
+                member_name: item.member_name,
+                share_amount_twd: Number(item.share_amount_twd || 0),
+                share_percentage: Number(item.share_percentage || 0)
+            })),
             receiptUrls: dedupeReceiptUrls([...extractReceiptUrls(row), ...extractReceiptUrlsFromRows(relatedReceipts)]),
             synced: true
         };
@@ -317,6 +330,17 @@ function normalizeExpenseReceipts(rows) {
         drive_url: row.drive_url || row.receipt_url || row.image_url || '',
         drive_file_id: row.drive_file_id || ''
     })).filter(item => item.expense_id);
+}
+
+function normalizeExpenseParticipants(rows) {
+    if (!Array.isArray(rows)) return [];
+    return rows.map(row => ({
+        participant_id: row.participant_id || row.id || '',
+        expense_id: row.expense_id || '',
+        member_name: row.member_name || '',
+        share_amount_twd: row.share_amount_twd || '',
+        share_percentage: row.share_percentage || ''
+    })).filter(item => item.expense_id && item.member_name);
 }
 
 function extractReceiptUrlsFromRows(rows) {
@@ -518,7 +542,8 @@ function applyLoadedData(data) {
     paymentMethods = normalizePaymentMethods(data.paymentMethods || data.payment_methods || []);
     exchangeRates = normalizeRates(data.exchangeRates || data.exchange_rates || exchangeRates);
     expenseReceipts = normalizeExpenseReceipts(data.expenseReceipts || data.expense_receipts || []);
-    expenses = normalizeExpenses(data.expenses || [], expenseReceipts);
+    expenseParticipants = normalizeExpenseParticipants(data.expenseParticipants || data.expense_participants || []);
+    expenses = normalizeExpenses(data.expenses || [], expenseReceipts, expenseParticipants);
 
     // 只有在 fallback 中有對應 trip 且 GAS 沒回傳資料時才使用 fallback
     if ((!members.length || !categories.length || !paymentMethods.length) && fallbackDataByTrip[currentTripId]) {
@@ -1035,6 +1060,7 @@ let expenseFilters = {
     to: ''
 };
 let pendingExpenseResetCurrency = '';
+let activeEditingExpenseId = '';
 
 function safeSetText(selector, value) {
     const node = $(selector);
@@ -1475,6 +1501,7 @@ function renderExpenses() {
       <div class="expense-day-list">
         ${dayExpenses.map(expense => `
         <article class="expense-item">
+          <button class="expense-edit-badge" type="button" data-edit-expense="${escapeHtml(expense.id)}" aria-label="編輯 ${escapeHtml(expense.title || '支出')}">編輯</button>
           <div class="expense-icon">${escapeHtml(expense.icon || '')}</div>
           <div class="expense-meta">
             <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
@@ -1487,6 +1514,238 @@ function renderExpenses() {
       </div>
     </section>`;
     }).join('') || `<p class="field-hint">${hasActiveFilters ? '沒有符合搜尋或篩選的支出。' : '這個旅遊目前沒有支出。'}</p>`;
+}
+
+function getExpenseById(expenseId) {
+    return expenses.find(item => String(item.id) === String(expenseId)) || null;
+}
+
+function findCategoryForExpense(expense) {
+    return categories.find(item => String(item.id) === String(expense.categoryId || '') || String(item.name) === String(expense.category || '')) || null;
+}
+
+function findPaymentForExpense(expense) {
+    return paymentMethods.find(item => String(item.id) === String(expense.paymentMethodId || '') || String(item.name) === String(expense.payment || '')) || null;
+}
+
+function renderEditSelects(expense) {
+    const paidBy = $('#edit-paid-by');
+    const categorySelect = $('#edit-category-id');
+    const paymentSelect = $('#edit-payment-method-id');
+
+    if (paidBy) {
+        paidBy.innerHTML = members.map(item => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.name)}</option>`).join('');
+        paidBy.value = expense.payer || members[0]?.name || '';
+    }
+
+    if (categorySelect) {
+        categorySelect.innerHTML = categories.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('');
+        categorySelect.value = findCategoryForExpense(expense)?.id || categories[0]?.id || '';
+    }
+
+    if (paymentSelect) {
+        paymentSelect.innerHTML = paymentMethods.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('');
+        paymentSelect.value = findPaymentForExpense(expense)?.id || paymentMethods[0]?.id || '';
+    }
+}
+
+function updateEditExchangePreview() {
+    const currency = $('#edit-expense-currency')?.value || 'TWD';
+    const amount = Number($('#edit-amount-original')?.value || 0);
+    const rate = Number(exchangeRates[currency] || 1);
+    if ($('#edit-rate-preview')) $('#edit-rate-preview').value = `${currency} ${rate}`;
+    if ($('#edit-amount-twd')) $('#edit-amount-twd').value = amount ? `NT$ ${money.format(Math.round(amount * rate))}` : '請輸入金額';
+}
+
+function getEditSelectedParticipants() {
+    return Array.from(document.querySelectorAll('#edit-participant-options input:checked')).map(input => input.value);
+}
+
+function getEditSplitType() {
+    return document.querySelector('input[name="edit_split_type"]:checked')?.value || '平均分';
+}
+
+function renderEditParticipants(expense) {
+    const container = $('#edit-participant-options');
+    if (!container) return;
+    const selected = new Set((expense.participants && expense.participants.length ? expense.participants : members.map(item => item.name)).map(String));
+    container.innerHTML = members.map(item => `
+        <label class="check-chip"><input type="checkbox" value="${escapeHtml(item.name)}" ${selected.has(String(item.name)) ? 'checked' : ''} /> ${escapeHtml(item.name)}</label>
+    `).join('');
+}
+
+function getEditSplitDefaults(expense, selected, kind) {
+    const details = Array.isArray(expense?.splitDetails) ? expense.splitDetails : [];
+    const rate = Number(expense?.rate || exchangeRates[$('#edit-expense-currency')?.value || 'TWD'] || 1) || 1;
+    return selected.map((name, index) => {
+        const detail = details.find(item => String(item.member_name) === String(name));
+        if (detail) {
+            if (kind === 'percent' && Number(detail.share_percentage)) return Number(detail.share_percentage);
+            if (kind === 'amount' && Number(detail.share_amount_twd)) return Math.round((Number(detail.share_amount_twd) / rate) * 100) / 100;
+        }
+        if (kind === 'percent') return distributeIntegerPercent(selected.length)[index] || 0;
+        return distributeAmount(Number($('#edit-amount-original')?.value || 0), selected.length)[index] || 0;
+    });
+}
+
+function renderEditSplitConfig(expense = getExpenseById(activeEditingExpenseId)) {
+    const splitType = getEditSplitType();
+    const selected = getEditSelectedParticipants();
+    const container = $('#edit-split-config');
+    if (!container) return;
+
+    if (!selected.length || splitType === '平均分') {
+        container.innerHTML = '';
+        container.style.display = 'none';
+        return;
+    }
+
+    const isPercent = splitType === '百分比分';
+    const kind = isPercent ? 'percent' : 'amount';
+    const defaults = getEditSplitDefaults(expense, selected, kind);
+
+    container.style.display = 'grid';
+    container.innerHTML = `
+        <label>${isPercent ? '請輸入每個人的分攤比例（%）' : '請輸入每個人的分攤金額（原始幣別）'}</label>
+        <div class="split-input-grid">
+            ${selected.map((name, index) => `
+                <div class="split-input-row">
+                    <span>${escapeHtml(name)} 分攤</span>
+                    <input class="split-input" type="number" data-member="${escapeHtml(name)}" data-kind="${kind}" min="0" step="${isPercent ? '1' : '0.01'}" value="${formatAmountValue(defaults[index])}" />
+                </div>
+            `).join('')}
+        </div>
+        <p class="field-hint" id="edit-split-summary"></p>
+    `;
+    updateEditSplitSummary();
+}
+
+function updateEditSplitSummary() {
+    const summary = $('#edit-split-summary');
+    if (!summary) return;
+    const inputs = Array.from(document.querySelectorAll('#edit-split-config .split-input'));
+    const kind = inputs[0]?.dataset.kind || '';
+    const total = inputs.reduce((sum, input) => sum + Number(input.value || 0), 0);
+    if (kind === 'percent') {
+        const diff = Math.round((100 - total) * 100) / 100;
+        summary.textContent = diff === 0 ? '合計 100%' : `目前合計 ${formatAmountValue(total)}%，差 ${formatAmountValue(Math.abs(diff))}%`;
+        return;
+    }
+    const target = Number($('#edit-amount-original')?.value || 0);
+    const diff = Math.round((target - total) * 100) / 100;
+    summary.textContent = diff === 0 ? '已符合原始金額' : `目前合計 ${formatAmountValue(total)}，差 ${formatAmountValue(Math.abs(diff))}`;
+}
+
+function validateEditSplitInputs(splitType, totalAmount) {
+    const selected = getEditSelectedParticipants();
+    if (!selected.length) {
+        alert('請至少選擇一位分帳對象。');
+        return { ok: false };
+    }
+
+    if (splitType === '平均分') {
+        return { ok: true, splitDetails: selected.map(memberName => ({ member_name: memberName, split_mode: 'equal' })) };
+    }
+
+    const inputs = Array.from(document.querySelectorAll('#edit-split-config .split-input'));
+    if (!inputs.length || inputs.length !== selected.length) {
+        alert('請確認分帳資料。');
+        return { ok: false };
+    }
+
+    const splitDetails = [];
+    for (const input of inputs) {
+        const value = Number(input.value);
+        if (!(value >= 0)) {
+            alert(`請輸入 ${input.dataset.member} 的有效數字。`);
+            input.focus();
+            return { ok: false };
+        }
+        if (splitType === '百分比分') splitDetails.push({ member_name: input.dataset.member, split_mode: 'percent', share_percentage: value });
+        else splitDetails.push({ member_name: input.dataset.member, split_mode: 'amount', share_amount_original: value });
+    }
+
+    const total = splitDetails.reduce((sum, item) => sum + Number(splitType === '百分比分' ? item.share_percentage : item.share_amount_original), 0);
+    const target = splitType === '百分比分' ? 100 : Number(totalAmount || 0);
+    if (Math.abs(total - target) > 0.01) {
+        alert(splitType === '百分比分' ? '分攤比例合計需要等於 100%。' : '分攤金額合計需要等於原始金額。');
+        return { ok: false };
+    }
+
+    return { ok: true, splitDetails };
+}
+
+function openExpenseEditModal(expenseId) {
+    const expense = getExpenseById(expenseId);
+    const modal = $('#expense-edit-modal');
+    if (!expense || !modal) return;
+
+    activeEditingExpenseId = expense.id;
+    $('#edit-expense-id').value = expense.id;
+    $('#edit-expense-title').value = expense.title || '';
+    $('#edit-expense-date').value = toExpenseDateKey(expense.date);
+    $('#edit-amount-original').value = Number(expense.amount || 0);
+    $('#edit-expense-currency').value = expense.currency || 'TWD';
+    $('#edit-note').value = expense.note || '';
+    safeSetText('#expense-edit-meta', `建立時間：${expense.createdAt || '未記錄'}　支出 ID：${expense.id}`);
+    renderEditSelects(expense);
+    renderEditParticipants(expense);
+    document.querySelectorAll('input[name="edit_split_type"]').forEach(input => {
+        input.checked = input.value === (expense.split || '平均分');
+    });
+    if (!document.querySelector('input[name="edit_split_type"]:checked')) {
+        const equalInput = document.querySelector('input[name="edit_split_type"][value="平均分"]');
+        if (equalInput) equalInput.checked = true;
+    }
+    updateEditExchangePreview();
+    renderEditSplitConfig(expense);
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeExpenseEditModal() {
+    const modal = $('#expense-edit-modal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    activeEditingExpenseId = '';
+    if (!$('#receipt-modal')?.classList.contains('show') && !$('#chart-zoom-modal')?.classList.contains('show')) {
+        document.body.style.overflow = '';
+    }
+}
+
+function buildEditExpensePayload() {
+    const selectedCategory = categories.find(item => String(item.id) === $('#edit-category-id')?.value);
+    const selectedPayment = paymentMethods.find(item => String(item.id) === $('#edit-payment-method-id')?.value);
+    const amount = Number($('#edit-amount-original')?.value || 0);
+    const currency = $('#edit-expense-currency')?.value || 'TWD';
+    const rate = Number(exchangeRates[currency] || 1);
+    const split = getEditSplitType();
+
+    if (!activeEditingExpenseId || !$('#edit-expense-title')?.value.trim() || !selectedCategory || !selectedPayment || !amount) return null;
+    const splitValidation = validateEditSplitInputs(split, amount);
+    if (!splitValidation.ok) return null;
+
+    return {
+        trip_id: currentTripId,
+        expense_id: activeEditingExpenseId,
+        title: $('#edit-expense-title').value.trim(),
+        payer_member_name: $('#edit-paid-by').value,
+        category_id: selectedCategory.id,
+        category_name: selectedCategory.name,
+        payment_method_id: selectedPayment.id,
+        payment_method_name: selectedPayment.name,
+        expense_date: $('#edit-expense-date').value,
+        amount_original: amount,
+        original_currency: currency,
+        exchange_rate_to_twd: rate,
+        amount_twd: Math.round(amount * rate),
+        split_type: split,
+        split_details: splitValidation.splitDetails,
+        note: $('#edit-note').value,
+        participants: getEditSelectedParticipants()
+    };
 }
 
 function bindTripSwitch() {
@@ -1598,6 +1857,18 @@ function bindGlobalClicks() {
         }
 
         if (!event.target.closest('.icon-select')) closeIconSelects();
+
+        const editExpenseButton = event.target.closest('[data-edit-expense]');
+        if (editExpenseButton) {
+            openExpenseEditModal(editExpenseButton.dataset.editExpense);
+            return;
+        }
+
+        const closeExpenseEditButton = event.target.closest('[data-close-expense-edit-modal]');
+        if (closeExpenseEditButton) {
+            closeExpenseEditModal();
+            return;
+        }
 
         const receiptButton = event.target.closest('[data-receipt-url]');
         if (receiptButton) {
@@ -1849,6 +2120,38 @@ function bindExpenseForm() {
     if (dateInput && !dateInput.value) {
         setRocDateValue(dateInput, getLocalTodayIso());
     }
+
+    $('#edit-expense-currency')?.addEventListener('change', () => {
+        updateEditExchangePreview();
+        renderEditSplitConfig();
+    });
+    $('#edit-amount-original')?.addEventListener('input', () => {
+        updateEditExchangePreview();
+        renderEditSplitConfig();
+    });
+    $('#edit-participant-options')?.addEventListener('change', (event) => {
+        if (event.target.matches('input[type="checkbox"]')) renderEditSplitConfig();
+    });
+    $('#edit-split-config')?.addEventListener('input', (event) => {
+        if (event.target.matches('.split-input')) updateEditSplitSummary();
+    });
+    document.querySelectorAll('input[name="edit_split_type"]').forEach(input => {
+        input.addEventListener('change', () => renderEditSplitConfig());
+    });
+    $('#expense-edit-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const payload = buildEditExpensePayload();
+        if (!payload) return;
+        await saveThenReload('updateExpense', payload, 900);
+        closeExpenseEditModal();
+    });
+    $('#expense-soft-delete-btn')?.addEventListener('click', async () => {
+        if (!activeEditingExpenseId) return;
+        const expense = getExpenseById(activeEditingExpenseId);
+        if (!confirm(`確定要軟刪除「${expense?.title || '這筆支出'}」嗎？\n\n刪除後不會出現在支出紀錄、總額與圖表中。`)) return;
+        await saveThenReload('deleteExpense', { trip_id: currentTripId, expense_id: activeEditingExpenseId }, 900);
+        closeExpenseEditModal();
+    });
 
     const expenseForm = $('#expense-create-form');
     if (!expenseForm) return;
@@ -2207,6 +2510,10 @@ function bindKeyboard() {
         }
         if (document.querySelector('.icon-select.open')) {
             closeIconSelects();
+            return;
+        }
+        if ($('#expense-edit-modal')?.classList.contains('show')) {
+            closeExpenseEditModal();
             return;
         }
         if ($('#import-text-modal')?.classList.contains('show')) {

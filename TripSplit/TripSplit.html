@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TripSplit｜快速記帳</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='48'%3E%E6%97%85%3C/text%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="./assets/app.css?v=12" />
+    <link rel="stylesheet" href="./assets/app.css?v=13" />
 </head>
 <body data-page="home">
     <header class="app-header">
@@ -280,8 +280,56 @@
         </div>
     </div>
 
+    <div class="receipt-modal" id="expense-edit-modal" aria-hidden="true" role="dialog" aria-label="編輯支出">
+        <div class="receipt-modal-backdrop" data-close-expense-edit-modal="true"></div>
+        <div class="receipt-modal-panel expense-edit-panel" role="document">
+            <div class="expense-edit-header">
+                <div>
+                    <h2>編輯支出</h2>
+                    <p id="expense-edit-meta">調整這筆支出的記帳資訊。</p>
+                </div>
+                <button class="receipt-modal-close" type="button" data-close-expense-edit-modal="true" aria-label="關閉">×</button>
+            </div>
+            <form id="expense-edit-form">
+                <input id="edit-expense-id" type="hidden" />
+                <div class="form-grid">
+                    <div class="field"><label for="edit-expense-title">支出名稱</label><input id="edit-expense-title" type="text" required /></div>
+                    <div class="field"><label for="edit-expense-date">日期</label><input id="edit-expense-date" type="date" /></div>
+                    <div class="field"><label for="edit-amount-original">原始金額</label><input id="edit-amount-original" type="number" min="0" step="0.01" required /></div>
+                    <div class="field"><label for="edit-expense-currency">原始幣別</label><select id="edit-expense-currency" required><option value="JPY">JPY 日圓</option><option value="USD">USD 美元</option><option value="KRW">KRW 韓元</option><option value="EUR">EUR 歐元</option><option value="THB">THB 泰銖</option><option value="TWD">TWD 新台幣</option></select></div>
+                    <div class="field"><label for="edit-rate-preview">匯率</label><input id="edit-rate-preview" type="text" readonly /></div>
+                    <div class="field"><label for="edit-amount-twd">台幣金額</label><input id="edit-amount-twd" type="text" readonly /></div>
+                    <div class="field"><label for="edit-paid-by">付款人</label><select id="edit-paid-by" required></select></div>
+                    <div class="field"><label for="edit-category-id">分類</label><select id="edit-category-id" required></select></div>
+                    <div class="field"><label for="edit-payment-method-id">付款方式</label><select id="edit-payment-method-id" required></select></div>
+                </div>
+                <div class="field full">
+                    <label>分帳方式</label>
+                    <div class="split-type">
+                        <label class="radio-card"><input type="radio" name="edit_split_type" value="平均分" checked /><span>平均分</span></label>
+                        <label class="radio-card"><input type="radio" name="edit_split_type" value="百分比分" /><span>依比例</span></label>
+                        <label class="radio-card"><input type="radio" name="edit_split_type" value="自訂金額" /><span>自訂金額</span></label>
+                    </div>
+                </div>
+                <div class="field full">
+                    <label>分帳對象</label>
+                    <div class="participant-options" id="edit-participant-options"></div>
+                </div>
+                <div class="field full split-config" id="edit-split-config" style="display:none;"></div>
+                <div class="field full"><label for="edit-note">備註</label><textarea id="edit-note"></textarea></div>
+                <div class="expense-edit-actions">
+                    <button class="btn btn-ghost danger" type="button" id="expense-soft-delete-btn">軟刪除</button>
+                    <div>
+                        <button class="btn btn-ghost" type="button" data-close-expense-edit-modal="true">取消</button>
+                        <button class="btn btn-primary" type="submit">儲存修改</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="./assets/roc-date.js?v=3"></script>
     <script src="./assets/charts.js?v=2"></script>
-    <script src="./assets/app.js?v=9"></script>
+    <script src="./assets/app.js?v=10"></script>
 </body>
 </html>
