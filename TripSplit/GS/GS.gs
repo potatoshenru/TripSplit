@@ -501,8 +501,7 @@ function writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd
 
   const splitType = payload.split_type || '平均分';
   const participantsCount = participantNames.length || 1;
-
-  participantNames.forEach(function(memberName) {
+  const shareRows = participantNames.map(function(memberName, index) {
     const detail = splitMap[memberName] || {};
     let shareAmountTwd = '';
     let sharePercentage = '';
@@ -518,19 +517,48 @@ function writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd
         sharePercentage = Number(((shareAmountOriginal / amountOriginal) * 100).toFixed(4));
       }
     } else {
-      shareAmountTwd = Math.round(amountTwd / participantsCount);
+      shareAmountTwd = splitIntegerAmount_(amountTwd, participantsCount)[index] || 0;
       sharePercentage = Number((100 / participantsCount).toFixed(4));
     }
 
+    return {
+      memberName: memberName,
+      shareAmountTwd: shareAmountTwd,
+      sharePercentage: sharePercentage
+    };
+  });
+
+  const diff = Math.round(amountTwd) - shareRows.reduce(function(sum, row) {
+    return sum + Number(row.shareAmountTwd || 0);
+  }, 0);
+  if (shareRows.length && diff !== 0) {
+    shareRows[shareRows.length - 1].shareAmountTwd = Number(shareRows[shareRows.length - 1].shareAmountTwd || 0) + diff;
+  }
+
+  shareRows.forEach(function(row) {
     appendObject(SHEET_NAMES.participants, {
       participant_id: createId('part'),
       expense_id: expenseId,
-      member_name: memberName,
-      share_amount_twd: shareAmountTwd,
-      share_percentage: sharePercentage,
+      member_name: row.memberName,
+      share_amount_twd: row.shareAmountTwd,
+      share_percentage: row.sharePercentage,
       created_at: now
     });
   });
+}
+
+function splitIntegerAmount_(amount, count) {
+  const total = Math.round(Number(amount || 0));
+  const safeCount = Math.max(Number(count || 0), 1);
+  const base = Math.floor(total / safeCount);
+  let remainder = total - (base * safeCount);
+  const shares = [];
+  for (let i = 0; i < safeCount; i += 1) {
+    const extra = remainder > 0 ? 1 : 0;
+    remainder -= extra;
+    shares.push(base + extra);
+  }
+  return shares;
 }
 
 function getExpenses(payload) {

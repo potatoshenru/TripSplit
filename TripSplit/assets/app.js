@@ -1,5 +1,5 @@
 /* TripSplit merged app bundle. Source modules merged to keep the package under 20 files. */
-const GAS_DEPLOYMENT_ID = 'AKfycbz7TfeMxwdkSW9H0mruPmeSSObxxrFSwOCaPJS16dW0-YajqveRJMN2Z_pC30ExUFDFAg';
+const GAS_DEPLOYMENT_ID = 'AKfycbxAi8lBEoyfcyy04-IzLw8acn6slrlCn7mJSO_UabBbehTF5VNo9BkhFNNxvWBupOpj1g';
 const GAS_WEB_APP_URL = `https://script.google.com/macros/s/${GAS_DEPLOYMENT_ID}/exec`;
 
 const GAS_WEB_APP_URLS = [GAS_WEB_APP_URL];
@@ -604,9 +604,10 @@ async function saveThenReload(action, payload, delay = 900) {
 }
 function computeMemberBalances() {
     const names = members.map(member => member.name);
-    const balances = {};
+    const nameSet = new Set(names);
+    const totals = {};
     names.forEach(name => {
-        balances[name] = 0;
+        totals[name] = { name, paid: 0, owed: 0 };
     });
 
     expenses.forEach(expense => {
@@ -614,19 +615,78 @@ function computeMemberBalances() {
         const amountTwd = Number(expense.twd || 0);
         if (!amountTwd || !names.length) return;
 
-        if (balances[payer] === undefined) balances[payer] = 0;
-        balances[payer] += amountTwd;
+        if (payer && !totals[payer]) {
+            totals[payer] = { name: payer, paid: 0, owed: 0 };
+        }
+        if (payer) totals[payer].paid += amountTwd;
 
-        const share = amountTwd / names.length;
-        names.forEach(name => {
-            balances[name] = (balances[name] || 0) - share;
+        const shareRows = getExpenseShareRows(expense, names, amountTwd);
+        shareRows.forEach(row => {
+            if (!row.name) return;
+            if (!totals[row.name]) {
+                totals[row.name] = { name: row.name, paid: 0, owed: 0 };
+            }
+            totals[row.name].owed += Number(row.amount || 0);
+            nameSet.add(row.name);
         });
     });
 
-    return names.map(name => ({
+    return Array.from(nameSet).map(name => ({
         name,
-        balance: Math.round(balances[name] || 0)
+        paid: Math.round(totals[name]?.paid || 0),
+        owed: Math.round(totals[name]?.owed || 0),
+        balance: Math.round((totals[name]?.paid || 0) - (totals[name]?.owed || 0))
     }));
+}
+
+function getExpenseShareRows(expense, memberNames, amountTwd) {
+    const details = Array.isArray(expense?.splitDetails) ? expense.splitDetails : [];
+    const usableDetails = details
+        .map(detail => ({
+            name: detail.member_name,
+            amount: Number(detail.share_amount_twd || 0),
+            hasAmount: detail.share_amount_twd !== '' && detail.share_amount_twd !== null && detail.share_amount_twd !== undefined
+        }))
+        .filter(detail => detail.name && detail.hasAmount && detail.amount >= 0);
+
+    if (usableDetails.length) {
+        return normalizeShareRounding(usableDetails, amountTwd);
+    }
+
+    const participants = Array.isArray(expense?.participants)
+        ? expense.participants.filter(Boolean)
+        : [];
+    const shareNames = participants.length ? participants : memberNames;
+    if (!shareNames.length) return [];
+
+    return splitAmountEvenly(amountTwd, shareNames).map((amount, index) => ({
+        name: shareNames[index],
+        amount
+    }));
+}
+
+function normalizeShareRounding(rows, targetTotal) {
+    const roundedRows = rows.map(row => ({
+        name: row.name,
+        amount: Math.round(Number(row.amount || 0))
+    }));
+    const diff = Math.round(targetTotal) - roundedRows.reduce((sum, row) => sum + row.amount, 0);
+    if (roundedRows.length && diff !== 0) {
+        roundedRows[roundedRows.length - 1].amount += diff;
+    }
+    return roundedRows;
+}
+
+function splitAmountEvenly(total, names) {
+    const roundedTotal = Math.round(Number(total || 0));
+    if (!names.length) return [];
+    const base = Math.floor(roundedTotal / names.length);
+    let remainder = roundedTotal - (base * names.length);
+    return names.map(() => {
+        const extra = remainder > 0 ? 1 : 0;
+        remainder -= extra;
+        return base + extra;
+    });
 }
 
 function buildSettlementSuggestions(balanceRows) {
@@ -668,18 +728,26 @@ function renderBalancesAndSettlements() {
     if (!balanceGrid || !settlementList) return;
 
     const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
-    const avg = members.length ? Math.round(total / members.length) : 0;
+    const totalOwed = balanceRows.reduce((sum, item) => sum + Number(item.owed || 0), 0);
 
     const memberCards = balanceRows.map(item => {
         const sign = item.balance >= 0 ? '+' : '-';
         const amount = money.format(Math.abs(item.balance));
         const className = item.balance > 0 ? 'positive' : item.balance < 0 ? 'negative' : 'neutral';
-        return `<div class="balance-card"><span>${item.name}</span><strong class="${className}">${sign} NT$ ${amount}</strong></div>`;
+        return `<div class="balance-card">
+            <span>${escapeHtml(item.name)}</span>
+            <strong class="${className}">${sign} NT$ ${amount}</strong>
+            <div class="balance-breakdown">
+                <small>已付 NT$ ${money.format(item.paid)}</small>
+                <small>應付 NT$ ${money.format(item.owed)}</small>
+            </div>
+        </div>`;
     }).join('');
 
     balanceGrid.innerHTML = memberCards
         + `<div class="balance-card"><span>已記錄支出</span><strong class="neutral">${expenses.length} 筆</strong></div>`
-        + `<div class="balance-card"><span>平均每人</span><strong class="neutral">NT$ ${money.format(avg)}</strong></div>`;
+        + `<div class="balance-card"><span>總支出</span><strong class="neutral">NT$ ${money.format(Math.round(total))}</strong></div>`
+        + `<div class="balance-card"><span>已分攤總額</span><strong class="neutral">NT$ ${money.format(Math.round(totalOwed))}</strong></div>`;
 
     const suggestions = buildSettlementSuggestions(balanceRows);
     settlementList.innerHTML = suggestions.length
