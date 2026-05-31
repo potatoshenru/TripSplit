@@ -1176,6 +1176,48 @@ function renderList(data, listId, type) {
   `).join('') || '<p class="field-hint">這個旅遊尚無資料。</p>';
 }
 
+function firstDisplayChar(value, fallback = '?') {
+    const chars = Array.from(String(value || '').trim());
+    return (chars[0] || fallback).toUpperCase();
+}
+
+function findExpenseCategoryIcon(categoryName) {
+    const name = String(categoryName || '');
+    const category = categories.find(item => String(item.name || '') === name);
+    if (category?.icon) return category.icon;
+    const expense = expenses.find(item => String(item.category || '') === name && item.icon);
+    return expense?.icon || firstDisplayChar(name, '#');
+}
+
+function findExpensePaymentIcon(paymentName) {
+    const name = String(paymentName || '');
+    const payment = paymentMethods.find(item => String(item.name || '') === name);
+    return payment?.icon || firstDisplayChar(name, '$');
+}
+
+function findExpensePayerIcon(payerName) {
+    const name = String(payerName || '');
+    const member = members.find(item => String(item.name || '') === name);
+    return member?.avatar || firstDisplayChar(name);
+}
+
+function getExpenseFilterIconSelectConfig(select, getIcon, options = {}) {
+    const firstOptionLabel = select.options[0]?.textContent || '';
+    return {
+        items: Array.from(select.options).map(option => {
+            const value = option.value;
+            return {
+                value,
+                label: option.textContent,
+                icon: value ? getIcon(value) : '全',
+                avatar: Boolean(options.avatar && value)
+            };
+        }),
+        placeholder: firstOptionLabel,
+        emptyLabel: firstOptionLabel
+    };
+}
+
 function getIconSelectConfig(select) {
     if (!select) return null;
     if (select.id === 'trip-select') {
@@ -1216,6 +1258,15 @@ function getIconSelectConfig(select) {
             placeholder: '請選擇付款方式',
             emptyLabel: '尚無付款方式'
         };
+    }
+    if (select.id === 'expense-filter-category') {
+        return getExpenseFilterIconSelectConfig(select, findExpenseCategoryIcon);
+    }
+    if (select.id === 'expense-filter-payer') {
+        return getExpenseFilterIconSelectConfig(select, findExpensePayerIcon, { avatar: true });
+    }
+    if (select.id === 'expense-filter-payment') {
+        return getExpenseFilterIconSelectConfig(select, findExpensePaymentIcon);
     }
     return null;
 }
@@ -1342,6 +1393,9 @@ function renderExpenseFilters() {
     expenseFilters.category = setOptions('#expense-filter-category', '全部分類', uniqueExpenseValues('category'), expenseFilters.category);
     expenseFilters.payer = setOptions('#expense-filter-payer', '全部付款人', uniqueExpenseValues('payer'), expenseFilters.payer);
     expenseFilters.payment = setOptions('#expense-filter-payment', '全部方式', uniqueExpenseValues('payment'), expenseFilters.payment);
+    ['#expense-filter-category', '#expense-filter-payer', '#expense-filter-payment'].forEach(selector => {
+        syncIconSelect($(selector));
+    });
 
     const searchInput = $('#expense-search');
     if (searchInput) {
