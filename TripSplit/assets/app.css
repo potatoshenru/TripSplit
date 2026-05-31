@@ -1200,9 +1200,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .expense-item {
-    position: relative;
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
     gap: 14px;
     align-items: center;
     padding: 15px;
@@ -1211,10 +1210,8 @@ input:focus, select:focus, textarea:focus {
     background: var(--surface-strong);
 }
 
-.expense-edit-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
+.expense-edit-badge,
+.expense-delete-badge {
     width: 42px;
     height: 42px;
     display: grid;
@@ -1231,6 +1228,25 @@ input:focus, select:focus, textarea:focus {
 
 .expense-edit-badge:hover {
     background: #ffe7b9;
+}
+
+.expense-delete-badge {
+    border-color: rgba(184, 74, 61, .3);
+    background: var(--red);
+    color: #fff;
+    font-size: 1.05rem;
+    box-shadow: 0 8px 18px rgba(184, 74, 61, .22);
+}
+
+.expense-delete-badge:hover {
+    background: #9f362d;
+}
+
+.expense-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 .expense-icon {
@@ -1269,7 +1285,6 @@ input:focus, select:focus, textarea:focus {
 .expense-amount {
     text-align: right;
     white-space: nowrap;
-    padding-right: 38px;
 }
 
     .expense-amount strong {
@@ -2072,6 +2087,11 @@ input:focus, select:focus, textarea:focus {
         grid-column: 1 / -1;
         text-align: left;
         padding-left: 52px;
+    }
+
+    .expense-actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
     }
 
     .toolbar {

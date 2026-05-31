@@ -1501,7 +1501,6 @@ function renderExpenses() {
       <div class="expense-day-list">
         ${dayExpenses.map(expense => `
         <article class="expense-item">
-          <button class="expense-edit-badge" type="button" data-edit-expense="${escapeHtml(expense.id)}" aria-label="編輯 ${escapeHtml(expense.title || '支出')}">編輯</button>
           <div class="expense-icon">${escapeHtml(expense.icon || '')}</div>
           <div class="expense-meta">
             <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
@@ -1509,6 +1508,10 @@ function renderExpenses() {
             ${buildReceiptLinks(expense)}
           </div>
           <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
+          <div class="expense-actions">
+            <button class="expense-edit-badge" type="button" data-edit-expense="${escapeHtml(expense.id)}" aria-label="編輯 ${escapeHtml(expense.title || '支出')}">編輯</button>
+            <button class="expense-delete-badge" type="button" data-delete-expense="${escapeHtml(expense.id)}" aria-label="刪除 ${escapeHtml(expense.title || '支出')}">🗑</button>
+          </div>
         </article>
         `).join('')}
       </div>
@@ -1748,6 +1751,15 @@ function buildEditExpensePayload() {
     };
 }
 
+async function confirmAndDeleteExpense(expenseId, onConfirmed) {
+    const expense = getExpenseById(expenseId);
+    if (!expense) return false;
+    if (!confirm(`確定要軟刪除「${expense.title || '這筆支出'}」嗎？\n\n刪除後不會出現在支出紀錄、總額與圖表中。`)) return false;
+    if (typeof onConfirmed === 'function') onConfirmed();
+    await saveThenReload('deleteExpense', { trip_id: currentTripId, expense_id: expense.id }, 900);
+    return true;
+}
+
 function bindTripSwitch() {
     const form = $('#trip-switch-form');
     const select = $('#trip-select');
@@ -1857,6 +1869,12 @@ function bindGlobalClicks() {
         }
 
         if (!event.target.closest('.icon-select')) closeIconSelects();
+
+        const deleteExpenseButton = event.target.closest('[data-delete-expense]');
+        if (deleteExpenseButton) {
+            await confirmAndDeleteExpense(deleteExpenseButton.dataset.deleteExpense);
+            return;
+        }
 
         const editExpenseButton = event.target.closest('[data-edit-expense]');
         if (editExpenseButton) {
@@ -2142,15 +2160,12 @@ function bindExpenseForm() {
         event.preventDefault();
         const payload = buildEditExpensePayload();
         if (!payload) return;
-        await saveThenReload('updateExpense', payload, 900);
         closeExpenseEditModal();
+        await saveThenReload('updateExpense', payload, 900);
     });
     $('#expense-soft-delete-btn')?.addEventListener('click', async () => {
         if (!activeEditingExpenseId) return;
-        const expense = getExpenseById(activeEditingExpenseId);
-        if (!confirm(`確定要軟刪除「${expense?.title || '這筆支出'}」嗎？\n\n刪除後不會出現在支出紀錄、總額與圖表中。`)) return;
-        await saveThenReload('deleteExpense', { trip_id: currentTripId, expense_id: activeEditingExpenseId }, 900);
-        closeExpenseEditModal();
+        await confirmAndDeleteExpense(activeEditingExpenseId, closeExpenseEditModal);
     });
 
     const expenseForm = $('#expense-create-form');
