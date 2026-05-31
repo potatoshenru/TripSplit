@@ -1915,11 +1915,14 @@ function bindExpenseForm() {
 // ── 匯入文字品項 Modal ───────────────────────────────────────────────────────
 let importTextItems = []; // 保持 modal 內資料
 
+let activeImportTextIndex = 0;
+
 function openImportTextModal() {
     const modal = $('#import-text-modal');
     if (!modal) return;
     modal.classList.add('show');
     modal.setAttribute('aria-hidden', 'false');
+    ensureImportTextControls();
     renderImportTextResult();
 }
 
@@ -1945,14 +1948,161 @@ function parseImportText(raw) {
         .filter(item => item.title);
 }
 
+function ensureImportTextControls() {
+    const openButton = $('#open-import-text-btn');
+    if (openButton && !openButton.parentElement?.classList.contains('import-text-header-actions')) {
+        const actions = document.createElement('div');
+        actions.className = 'import-text-header-actions';
+        openButton.insertAdjacentElement('beforebegin', actions);
+        actions.appendChild(openButton);
+        const existingFormNav = $('#import-text-form-nav');
+        if (existingFormNav) actions.appendChild(existingFormNav);
+    }
+
+    if (openButton && !$('#import-text-count-badge')) {
+        openButton.classList.add('import-text-open-btn');
+        const badge = document.createElement('span');
+        badge.className = 'import-text-count-badge';
+        badge.id = 'import-text-count-badge';
+        badge.hidden = true;
+        badge.textContent = '0';
+        openButton.appendChild(badge);
+    }
+
+    if (openButton && openButton.parentElement && !$('#import-text-form-nav')) {
+        const formNav = document.createElement('div');
+        formNav.className = 'import-text-form-nav';
+        formNav.id = 'import-text-form-nav';
+        formNav.hidden = true;
+        formNav.innerHTML = `
+            <button class="import-text-nav-btn import-text-form-nav-btn" type="button" id="import-text-form-prev-btn" aria-label="上一筆匯入品項">‹</button>
+            <span class="import-text-nav-status" id="import-text-form-nav-status">0 / 0</span>
+            <button class="import-text-nav-btn import-text-form-nav-btn" type="button" id="import-text-form-next-btn" aria-label="下一筆匯入品項">›</button>
+        `;
+        openButton.parentElement.appendChild(formNav);
+    }
+
+    const modalTitle = $('#import-text-modal .import-text-header h2');
+    if (modalTitle && !$('#import-text-title-badge')) {
+        modalTitle.classList.add('import-text-title-with-badge');
+        const titleBadge = document.createElement('span');
+        titleBadge.className = 'import-text-count-badge import-text-title-badge';
+        titleBadge.id = 'import-text-title-badge';
+        titleBadge.hidden = true;
+        titleBadge.textContent = '0';
+        modalTitle.appendChild(titleBadge);
+    }
+
+    const section = $('#import-text-result-section');
+    const list = $('#import-text-result-list');
+    if (section && list && !$('#import-text-nav-status')) {
+        const toolbar = document.createElement('div');
+        toolbar.className = 'import-text-result-toolbar';
+        toolbar.innerHTML = `
+            <div class="import-text-section-label">解析結果（點「帶入」填入新增支出表單）</div>
+            <div class="import-text-nav-actions" aria-label="切換匯入文字品項">
+                <button class="import-text-nav-btn" type="button" id="import-text-prev-btn" aria-label="上一筆">‹</button>
+                <span class="import-text-nav-status" id="import-text-nav-status">0 / 0</span>
+                <button class="import-text-nav-btn" type="button" id="import-text-next-btn" aria-label="下一筆">›</button>
+                <button class="btn btn-primary import-text-current-btn" type="button" id="import-text-current-btn">帶入目前</button>
+            </div>
+        `;
+        const existingLabel = section.querySelector('.import-text-section-label');
+        if (existingLabel) existingLabel.replaceWith(toolbar);
+        else section.insertBefore(toolbar, list);
+    }
+}
+
+function updateImportTextCountBadge() {
+    ensureImportTextControls();
+    const count = importTextItems.length;
+    document.querySelectorAll('.import-text-count-badge').forEach(badge => {
+        badge.textContent = String(count);
+        badge.hidden = count <= 0;
+    });
+    updateImportTextFormNav();
+}
+
+function updateImportTextFormNav() {
+    const nav = $('#import-text-form-nav');
+    const status = $('#import-text-form-nav-status');
+    const prevBtn = $('#import-text-form-prev-btn');
+    const nextBtn = $('#import-text-form-next-btn');
+    if (!nav) return;
+
+    const count = importTextItems.length;
+    nav.hidden = count <= 0;
+    if (status) status.textContent = count > 0 ? `${activeImportTextIndex + 1} / ${count}` : '0 / 0';
+    [prevBtn, nextBtn].forEach(button => {
+        if (button) button.disabled = count <= 0;
+    });
+}
+
+function clampActiveImportTextIndex() {
+    if (!importTextItems.length) {
+        activeImportTextIndex = 0;
+        return;
+    }
+    activeImportTextIndex = Math.min(Math.max(activeImportTextIndex, 0), importTextItems.length - 1);
+}
+
+function setActiveImportTextIndex(index) {
+    if (!importTextItems.length) return;
+    activeImportTextIndex = (index + importTextItems.length) % importTextItems.length;
+    renderImportTextResult();
+    $(`[data-import-idx="${activeImportTextIndex}"]`)?.scrollIntoView({ block: 'nearest' });
+}
+
+function importTextItemToForm(index, options = {}) {
+    const item = importTextItems[index];
+    if (!item) return false;
+
+    const titleInput = $('#expense-title');
+    const dateInput = $('#expense-date');
+    const amountInput = $('#amount-original');
+    if (titleInput) titleInput.value = item.title;
+    if (dateInput && item.date) {
+        const normalized = item.date.replace(/\//g, '-');
+        setRocDateValue(dateInput, normalized);
+    }
+    if (amountInput) {
+        amountInput.value = item.amount;
+        updateExchangePreview();
+    }
+
+    activeImportTextIndex = index;
+    updateImportTextFormNav();
+    if (options.closeModal !== false) closeImportTextModal();
+    if (options.scroll !== false) setDashboardTab('quick', { updateHash: true, scroll: true });
+    return true;
+}
+
+function stepImportTextItemOnForm(step) {
+    if (!importTextItems.length) return;
+    const nextIndex = (activeImportTextIndex + step + importTextItems.length) % importTextItems.length;
+    importTextItemToForm(nextIndex, { closeModal: false, scroll: false });
+    renderImportTextResult();
+}
+
 function renderImportTextResult() {
+    ensureImportTextControls();
+    updateImportTextCountBadge();
     const section = $('#import-text-result-section');
     const list = $('#import-text-result-list');
     if (!section || !list) return;
     if (!importTextItems.length) { section.style.display = 'none'; return; }
+    clampActiveImportTextIndex();
     section.style.display = '';
+    const status = $('#import-text-nav-status');
+    const prevBtn = $('#import-text-prev-btn');
+    const nextBtn = $('#import-text-next-btn');
+    const currentBtn = $('#import-text-current-btn');
+    if (status) status.textContent = `${activeImportTextIndex + 1} / ${importTextItems.length}`;
+    [prevBtn, nextBtn, currentBtn].forEach(button => {
+        if (button) button.disabled = importTextItems.length <= 0;
+    });
     list.innerHTML = importTextItems.map((item, idx) => `
-    <div class="import-text-result-row" data-import-idx="${idx}">
+    <div class="import-text-result-row${idx === activeImportTextIndex ? ' active' : ''}" data-import-idx="${idx}">
       <div class="import-text-result-info">
         <span class="import-text-result-date">${escapeHtml(formatRocDate(parseRocDate(item.date)) || item.date)}</span>
         <span class="import-text-result-title">${escapeHtml(item.title)}</span>
@@ -1971,6 +2121,9 @@ function escapeHtml(str) {
 }
 
 function bindImportTextModal() {
+    ensureImportTextControls();
+    updateImportTextCountBadge();
+
     $('#open-import-text-btn')?.addEventListener('click', openImportTextModal);
 
     $('#copy-ai-prompt-btn')?.addEventListener('click', () => {
@@ -1984,6 +2137,7 @@ function bindImportTextModal() {
     $('#parse-import-text-btn')?.addEventListener('click', () => {
         const raw = $('#import-text-textarea')?.value || '';
         importTextItems = parseImportText(raw);
+        activeImportTextIndex = 0;
         // clear textarea after parsing, per spec: 匯入新的資料要先清除後再進行導入
         const ta = $('#import-text-textarea');
         if (ta) ta.value = '';
@@ -1994,31 +2148,35 @@ function bindImportTextModal() {
         const ta = $('#import-text-textarea');
         if (ta) ta.value = '';
         importTextItems = [];
+        activeImportTextIndex = 0;
         renderImportTextResult();
+    });
+
+    $('#import-text-prev-btn')?.addEventListener('click', () => {
+        setActiveImportTextIndex(activeImportTextIndex - 1);
+    });
+
+    $('#import-text-next-btn')?.addEventListener('click', () => {
+        setActiveImportTextIndex(activeImportTextIndex + 1);
+    });
+
+    $('#import-text-current-btn')?.addEventListener('click', () => {
+        importTextItemToForm(activeImportTextIndex);
+    });
+
+    $('#import-text-form-prev-btn')?.addEventListener('click', () => {
+        stepImportTextItemOnForm(-1);
+    });
+
+    $('#import-text-form-next-btn')?.addEventListener('click', () => {
+        stepImportTextItemOnForm(1);
     });
 
     $('#import-text-result-list')?.addEventListener('click', (event) => {
         const importBtn = event.target.closest('[data-import-item]');
         if (importBtn) {
             const idx = Number(importBtn.dataset.importItem);
-            const item = importTextItems[idx];
-            if (!item) return;
-            // fill form
-            const titleInput = $('#expense-title');
-            const dateInput = $('#expense-date');
-            const amountInput = $('#amount-original');
-            if (titleInput) titleInput.value = item.title;
-            if (dateInput && item.date) {
-                // try parse date: YYYY/MM/DD or YYYY-MM-DD
-                const normalized = item.date.replace(/\//g, '-');
-                setRocDateValue(dateInput, normalized);
-            }
-            if (amountInput) {
-                amountInput.value = item.amount;
-                updateExchangePreview();
-            }
-            closeImportTextModal();
-            setDashboardTab('quick', { updateHash: true, scroll: true });
+            importTextItemToForm(idx);
             return;
         }
 
@@ -2026,7 +2184,15 @@ function bindImportTextModal() {
         if (removeBtn) {
             const idx = Number(removeBtn.dataset.removeImportItem);
             importTextItems.splice(idx, 1);
+            if (idx <= activeImportTextIndex) activeImportTextIndex -= 1;
+            clampActiveImportTextIndex();
             renderImportTextResult();
+            return;
+        }
+
+        const row = event.target.closest('[data-import-idx]');
+        if (row) {
+            setActiveImportTextIndex(Number(row.dataset.importIdx));
         }
     });
 }
