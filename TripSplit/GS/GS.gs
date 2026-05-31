@@ -17,7 +17,7 @@
  */
 
 const SPREADSHEET_ID = '1vbdw48vV8-lETLO1bdzc1wH3OMJcn_2GuPxafFJexu4';
-const RECEIPT_FOLDER_ID = '1cflyICWeN6psWIM5xhJnTzKRLDbpxg9b';
+const RECEIPT_FOLDER_ID = '1AZgXmn1U8JUQ_KB73mGm8D60P_vDteD7';
 
 const SHEET_NAMES = {
   trips: 'trips',
@@ -131,7 +131,8 @@ function sheet(name) {
 function setupSheets() {
   const schemas = {
     [SHEET_NAMES.trips]: [
-      'trip_id', 'trip_name', 'base_currency', 'created_by', 'created_at', 'updated_at', 'is_archived'
+      'trip_id', 'trip_name', 'base_currency', 'created_by', 'created_at', 'updated_at', 'is_archived',
+      'receipt_folder_id', 'receipt_folder_url'
     ],
     [SHEET_NAMES.members]: [
       'member_id', 'trip_id', 'member_name', 'email_or_note', 'avatar_text', 'created_at', 'is_active'
@@ -429,7 +430,7 @@ function addExpense(payload) {
 
   writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd, rate, now);
 
-  const uploadedReceipts = uploadReceiptFiles(expenseId, payload.receipts || []);
+  const uploadedReceipts = uploadReceiptFiles(tripId, expenseId, payload.receipts || []);
 
   return {
     expense: expenseRow,
@@ -567,12 +568,55 @@ function getParticipantsByExpenseIds(expenseIds) {
   });
 }
 
-function uploadReceiptFiles(expenseId, receipts) {
+function getTripReceiptFolder_(tripId) {
+  const trip = findFirst(SHEET_NAMES.trips, { trip_id: tripId });
+
+  if (trip && trip.receipt_folder_id) {
+    try {
+      return DriveApp.getFolderById(trip.receipt_folder_id);
+    } catch (error) {
+      // Folder may have been deleted or access may have changed. Recreate below.
+    }
+  }
+
+  const folder = createTripReceiptFolder_(tripId, trip ? trip.trip_name : tripId);
+  if (trip) {
+    saveTripReceiptFolder_(tripId, folder);
+  }
+  return folder;
+}
+
+function createTripReceiptFolder_(tripId, tripName) {
+  const parent = DriveApp.getFolderById(RECEIPT_FOLDER_ID);
+  const folderName = buildTripReceiptFolderName_(tripId, tripName);
+  const existingFolders = parent.getFoldersByName(folderName);
+
+  if (existingFolders.hasNext()) {
+    return existingFolders.next();
+  }
+
+  return parent.createFolder(folderName);
+}
+
+function buildTripReceiptFolderName_(tripId, tripName) {
+  const name = String(tripName || tripId || 'trip').trim() || 'trip';
+  return name + ' - ' + tripId;
+}
+
+function saveTripReceiptFolder_(tripId, folder) {
+  return updateObjectById_(SHEET_NAMES.trips, 'trip_id', tripId, {
+    receipt_folder_id: folder.getId(),
+    receipt_folder_url: folder.getUrl(),
+    updated_at: new Date()
+  });
+}
+
+function uploadReceiptFiles(tripId, expenseId, receipts) {
   if (!receipts || !receipts.length) {
     return [];
   }
 
-  const folder = DriveApp.getFolderById(RECEIPT_FOLDER_ID);
+  const folder = getTripReceiptFolder_(tripId);
   const uploaded = [];
 
   receipts.forEach(function(receipt, index) {
@@ -922,6 +966,7 @@ function unarchiveTrip(payload) {
 function addTrip(payload) {
   const tripId = payload.trip_id || createId('trip');
   const now = new Date();
+  const tripName = required(payload.trip_name, 'trip_name');
 
   const existing = findFirst(SHEET_NAMES.trips, {
     trip_id: tripId
@@ -931,14 +976,19 @@ function addTrip(payload) {
     return existing;
   }
 
+  ensureSheetColumns_(sheet(SHEET_NAMES.trips), ['receipt_folder_id', 'receipt_folder_url']);
+  const receiptFolder = createTripReceiptFolder_(tripId, tripName);
+
   const row = {
     trip_id: tripId,
-    trip_name: required(payload.trip_name, 'trip_name'),
+    trip_name: tripName,
     base_currency: payload.base_currency || 'TWD',
     created_by: payload.created_by || '',
     created_at: now,
     updated_at: now,
-    is_archived: false
+    is_archived: false,
+    receipt_folder_id: receiptFolder.getId(),
+    receipt_folder_url: receiptFolder.getUrl()
   };
 
   appendObject(SHEET_NAMES.trips, row);
