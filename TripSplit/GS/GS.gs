@@ -775,10 +775,18 @@ function getObjects(sheetName) {
   return values.slice(1).map((row) => {
     const object = {};
     headers.forEach((header, index) => {
-      object[header] = row[index];
+      object[header] = serializeSheetValue_(header, row[index]);
     });
     return object;
   });
+}
+
+function serializeSheetValue_(header, value) {
+  if (value instanceof Date && header === 'expense_date') {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+
+  return value;
 }
 
 function getHeaders(target) {

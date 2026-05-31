@@ -1,5 +1,5 @@
 /* TripSplit merged app bundle. Source modules merged to keep the package under 20 files. */
-const GAS_DEPLOYMENT_ID = 'AKfycbxAi8lBEoyfcyy04-IzLw8acn6slrlCn7mJSO_UabBbehTF5VNo9BkhFNNxvWBupOpj1g';
+const GAS_DEPLOYMENT_ID = 'AKfycbxfpN7YOyf0G6lnrQ36Zt75qxz5MRBK3cOuqU_GFUhVhZqxi1IWLnGw_022UYA6EPbnQw';
 const GAS_WEB_APP_URL = `https://script.google.com/macros/s/${GAS_DEPLOYMENT_ID}/exec`;
 
 const GAS_WEB_APP_URLS = [GAS_WEB_APP_URL];
@@ -735,11 +735,11 @@ function renderBalancesAndSettlements() {
         const amount = money.format(Math.abs(item.balance));
         const className = item.balance > 0 ? 'positive' : item.balance < 0 ? 'negative' : 'neutral';
         return `<div class="balance-card">
-            <span>${escapeHtml(item.name)}</span>
+            <span class="balance-person-name">${escapeHtml(item.name)}</span>
             <strong class="${className}">${sign} NT$ ${amount}</strong>
             <div class="balance-breakdown">
+                <small>個人消費 NT$ ${money.format(item.owed)}</small>
                 <small>已付 NT$ ${money.format(item.paid)}</small>
-                <small>應付 NT$ ${money.format(item.owed)}</small>
             </div>
         </div>`;
     }).join('');
@@ -1449,15 +1449,20 @@ function toExpenseDateKey(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
     const normalized = raw.replace(/\//g, '-');
-    const match = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    const match = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
     if (match) return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
     const time = Date.parse(raw);
-    return Number.isFinite(time) ? new Date(time).toISOString().slice(0, 10) : '';
+    if (!Number.isFinite(time)) return '';
+    const date = new Date(time);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function getExpenseDateTime(expense) {
     const key = toExpenseDateKey(expense.date);
-    const time = Date.parse(key || expense.date || '');
+    const match = key.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const time = match
+        ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])).getTime()
+        : Date.parse(expense.date || '');
     return Number.isFinite(time) ? time : 0;
 }
 
