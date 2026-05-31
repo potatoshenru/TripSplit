@@ -1,5 +1,5 @@
 /* TripSplit merged app bundle. Source modules merged to keep the package under 20 files. */
-const GAS_DEPLOYMENT_ID = 'AKfycbzMyU5EqIvFc-kZUxNsC6YaINNkQTVB1o1AF-BFLUHWjnICqFhU4NwNBHEsf0SJEAM0hA';
+const GAS_DEPLOYMENT_ID = 'AKfycbwT2FTdX5i6-ieruh7xl5tZy9iXp-MFuPvyKwzJiFf4aECI4GqJfWIltKpxSZ6UpahPXQ';
 const GAS_WEB_APP_URL = `https://script.google.com/macros/s/${GAS_DEPLOYMENT_ID}/exec`;
 
 const GAS_WEB_APP_URLS = [GAS_WEB_APP_URL];
