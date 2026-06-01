@@ -1032,9 +1032,7 @@ function addTrip(payload) {
   // 為新旅遊建立預設成員、分類、付款方式
   const members = payload.members || [
     ['Dustin', '發起人', 'D'],
-    ['Amy', '旅伴', 'A'],
-    ['Ben', '旅伴', 'B'],
-    ['Cindy', '旅伴', 'C']
+    ['阿泥', '旅伴', '泥'],
   ];
   members.forEach(function(member) {
     const name = Array.isArray(member) ? member[0] : member;
@@ -1054,10 +1052,13 @@ function addTrip(payload) {
   [
     ['餐飲', '🍜', '預設分類'],
     ['早餐', '🍳', '自訂分類'],
+    ['午餐', '🍗', '自訂分類'],
+    ['晚餐', '🍕', '自訂分類'],
     ['門票', '🎟', '自訂分類'],
     ['交通', '🚆', '預設分類'],
     ['住宿', '🏨', '預設分類'],
-    ['購物', '🛍', '預設分類']
+    ['購物', '🛍', '預設分類'],
+    ['保險', '📄', '預設分類'],
   ].forEach(function(cat) {
     appendObject(SHEET_NAMES.categories, {
       category_id: createId('cat'),
@@ -1072,9 +1073,14 @@ function addTrip(payload) {
 
   [
     ['現金', '💵', '預設方式'],
-    ['Visa', '💳', '信用卡'],
+    ['中信', '💳', '信用卡'],
+    ['國泰', '💳', '信用卡'],
+    ['台新', '💳', '信用卡'],
+    ['星展', '💳', '信用卡'],
+    ['玉山', '💳', '信用卡'],
+    ['富邦', '💳', '信用卡'],
     ['LINE Pay', '📱', '行動支付'],
-    ['Suica', '🚇', '交通卡']
+    ['悠遊卡', '🚇', '交通卡']
   ].forEach(function(pay) {
     appendObject(SHEET_NAMES.paymentMethods, {
       payment_method_id: createId('pay'),
