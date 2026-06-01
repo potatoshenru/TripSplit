@@ -1172,6 +1172,8 @@ let expenseFilters = {
     from: '',
     to: ''
 };
+let expandedExpenseIds = new Set();
+let openExpenseMenuId = '';
 let pendingExpenseResetCurrency = '';
 let activeEditingExpenseId = '';
 
@@ -1519,6 +1521,56 @@ function formatExpenseDateHeading(dateKey) {
     return `${formatRocDate(dateKey)} ${weekday}`;
 }
 
+function buildExpenseSummary(expense) {
+    const tags = [
+        `付款人 ${expense.payer || '未設定'}`,
+        expense.payment || '未設定付款方式',
+        `${expense.currency || 'TWD'} ${money.format(Number(expense.amount || 0))}`,
+        `匯率 ${money.format(Number(expense.rate || 1))}`,
+        expense.split || ''
+    ].filter(Boolean);
+
+    return `
+        <div class="expense-summary-tags" aria-label="付款資訊">
+          ${tags.map(tag => `<span class="expense-summary-tag">${escapeHtml(tag)}</span>`).join('')}
+        </div>`;
+}
+
+function buildExpenseDetail(expense) {
+    const details = Array.isArray(expense.splitDetails) ? expense.splitDetails : [];
+    const participants = details.length
+        ? details
+        : (expense.participants || []).map(name => ({
+            member_name: name,
+            share_amount_twd: ''
+        }));
+    const paidAmount = `NT$ ${money.format(Math.round(expense.twd || 0))}`;
+    const participantRows = participants.map(item => {
+        const share = Number(item.share_amount_twd || 0);
+        const amountText = share ? `NT$ ${money.format(Math.round(share))}` : '金額未設定';
+        return `
+            <div class="expense-detail-row">
+              <span>${escapeHtml(item.member_name || '未命名')}</span>
+              <strong>${escapeHtml(amountText)}</strong>
+            </div>`;
+    }).join('');
+
+    return `
+        <div class="expense-detail-panel">
+          <div class="expense-detail-section">
+            <div class="expense-detail-label">付款人</div>
+            <div class="expense-detail-row expense-detail-paid">
+              <span>${escapeHtml(expense.payer || '未設定')}</span>
+              <strong>已付 ${paidAmount}</strong>
+            </div>
+          </div>
+          <div class="expense-detail-section">
+            <div class="expense-detail-label">參與者</div>
+            ${participantRows || '<p class="expense-detail-empty">目前沒有分帳明細</p>'}
+          </div>
+        </div>`;
+}
+
 function uniqueExpenseValues(key) {
     return [...new Set(expenses.map(expense => String(expense[key] || '').trim()).filter(Boolean))]
         .sort((a, b) => a.localeCompare(b, 'zh-Hant'));
@@ -1592,7 +1644,7 @@ function groupExpensesByDate(visibleExpenses) {
     }, new Map());
 }
 
-function renderExpenses() {
+function renderExpensesLegacy() {
     const list = $('#expense-list');
     const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
     safeSetText('#summary-total', `NT$ ${money.format(Math.round(total))}`);
@@ -1635,6 +1687,61 @@ function renderExpenses() {
       </div>
     </section>`;
     }).join('') || `<p class="field-hint">${hasActiveFilters ? '沒有符合搜尋或篩選的支出。' : '這個旅遊目前沒有支出。'}</p>`;
+}
+
+function renderExpenses() {
+    const list = $('#expense-list');
+    const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
+    safeSetText('#summary-total', `NT$ ${money.format(Math.round(total))}`);
+    safeSetText('#summary-count', `${expenses.length} 筆`);
+
+    if (!list) return;
+    renderExpenseFilters();
+
+    const visibleExpenses = getVisibleExpenses();
+    const groupedExpenses = groupExpensesByDate(visibleExpenses);
+    const hasActiveFilters = Boolean(expenseSearchTerm || Object.values(expenseFilters).some(Boolean));
+
+    list.innerHTML = Array.from(groupedExpenses.entries()).map(([dateKey, dayExpenses]) => {
+        const dayTotal = dayExpenses.reduce((sum, expense) => sum + Number(expense.twd || 0), 0);
+        return `
+    <section class="expense-day-group">
+      <div class="expense-day-header">
+        <div>
+          <strong>${formatExpenseDateHeading(dateKey)}</strong>
+          <span>${dayExpenses.length} 筆支出</span>
+        </div>
+        <strong>NT$ ${money.format(Math.round(dayTotal))}</strong>
+      </div>
+      <div class="expense-day-list">
+        ${dayExpenses.map(expense => {
+            const expenseId = String(expense.id || '');
+            const isExpanded = expandedExpenseIds.has(expenseId);
+            const isMenuOpen = openExpenseMenuId === expenseId;
+            return `
+        <article class="expense-item${isExpanded ? ' is-expanded' : ''}" data-expense-card="${escapeHtml(expenseId)}">
+          <div class="expense-icon">${escapeHtml(expense.icon || '')}</div>
+          <div class="expense-meta">
+            <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
+            ${buildExpenseSummary(expense)}
+            ${buildReceiptLinks(expense)}
+            <button class="expense-detail-toggle" type="button" data-toggle-expense-detail="${escapeHtml(expenseId)}" aria-expanded="${isExpanded}" aria-label="${isExpanded ? '收合' : '展開'} ${escapeHtml(expense.title || '支出')} 明細">明細 <span aria-hidden="true">${isExpanded ? '▲' : '▼'}</span></button>
+          </div>
+          <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
+          <div class="expense-actions">
+            <button class="expense-more-btn" type="button" data-expense-menu="${escapeHtml(expenseId)}" aria-expanded="${isMenuOpen}" aria-label="更多 ${escapeHtml(expense.title || '支出')} 操作">⋯</button>
+            <div class="expense-action-menu${isMenuOpen ? ' open' : ''}">
+              <button type="button" data-edit-expense="${escapeHtml(expenseId)}">編輯</button>
+              <button class="danger" type="button" data-delete-expense="${escapeHtml(expenseId)}">刪除</button>
+            </div>
+          </div>
+          ${isExpanded ? buildExpenseDetail(expense) : ''}
+        </article>
+        `;
+        }).join('')}
+      </div>
+    </section>`;
+    }).join('') || `<p class="field-hint">${hasActiveFilters ? '沒有符合篩選條件的支出。' : '目前還沒有支出紀錄。'}</p>`;
 }
 
 function getExpenseById(expenseId) {
@@ -1988,14 +2095,41 @@ function bindGlobalClicks() {
 
         if (!event.target.closest('.icon-select')) closeIconSelects();
 
+        const expenseMenuButton = event.target.closest('[data-expense-menu]');
+        if (expenseMenuButton) {
+            const menuId = expenseMenuButton.dataset.expenseMenu || '';
+            openExpenseMenuId = openExpenseMenuId === menuId ? '' : menuId;
+            renderExpenses();
+            return;
+        }
+
+        const expenseDetailButton = event.target.closest('[data-toggle-expense-detail]');
+        const expenseCard = event.target.closest('[data-expense-card]');
+        const shouldToggleCard = expenseCard && !event.target.closest('button, a, input, select, textarea');
+        if (expenseDetailButton || shouldToggleCard) {
+            const expenseId = expenseDetailButton?.dataset.toggleExpenseDetail || expenseCard?.dataset.expenseCard || '';
+            if (expandedExpenseIds.has(expenseId)) expandedExpenseIds.delete(expenseId);
+            else expandedExpenseIds.add(expenseId);
+            openExpenseMenuId = '';
+            renderExpenses();
+            return;
+        }
+
+        if (openExpenseMenuId && !event.target.closest('.expense-actions')) {
+            openExpenseMenuId = '';
+            renderExpenses();
+        }
+
         const deleteExpenseButton = event.target.closest('[data-delete-expense]');
         if (deleteExpenseButton) {
+            openExpenseMenuId = '';
             await confirmAndDeleteExpense(deleteExpenseButton.dataset.deleteExpense);
             return;
         }
 
         const editExpenseButton = event.target.closest('[data-edit-expense]');
         if (editExpenseButton) {
+            openExpenseMenuId = '';
             openExpenseEditModal(editExpenseButton.dataset.editExpense);
             return;
         }
