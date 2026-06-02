@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TripSplit｜快速記帳</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='48'%3E%E6%97%85%3C/text%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="./assets/app.css?v=16" />
+    <link rel="stylesheet" href="./assets/app.css?v=17" />
 </head>
 <body data-page="home">
     <header class="app-header">
@@ -229,6 +229,33 @@
         </div>
     </div>
 
+    <div class="receipt-modal" id="receipt-upload-modal" aria-hidden="true" role="dialog" aria-label="上傳照片">
+        <div class="receipt-modal-backdrop" data-close-receipt-upload-modal="true"></div>
+        <div class="receipt-modal-panel receipt-upload-panel" role="document">
+            <div class="receipt-upload-header">
+                <div>
+                    <h2>上傳照片</h2>
+                    <p><span id="receipt-upload-title">支出照片</span> · <span id="receipt-upload-count">0 / 5</span></p>
+                </div>
+                <button class="receipt-modal-close" type="button" data-close-receipt-upload-modal="true" aria-label="關閉">×</button>
+            </div>
+            <div class="upload-box">
+                <div class="upload-head"><span class="upload-icon">📷</span><div><strong>收據照片</strong><span>最多 5 張，可從相簿選擇或直接開啟相機。</span></div></div>
+                <div class="upload-actions">
+                    <label class="upload-trigger" for="receipt-upload-files">選擇相簿</label>
+                    <label class="upload-trigger secondary" for="receipt-upload-camera-files">開啟相機</label>
+                </div>
+                <input id="receipt-upload-files" class="file-input" type="file" accept="image/*" multiple />
+                <input id="receipt-upload-camera-files" class="file-input" type="file" accept="image/*" capture="environment" />
+                <div class="receipt-preview" id="receipt-upload-preview"></div>
+            </div>
+            <div class="receipt-upload-actions">
+                <button class="btn btn-ghost" type="button" data-close-receipt-upload-modal="true">取消</button>
+                <button class="btn btn-primary" type="button" id="receipt-upload-submit" disabled>上傳</button>
+            </div>
+        </div>
+    </div>
+
     <div class="receipt-modal chart-zoom-modal" id="chart-zoom-modal" aria-hidden="true" role="dialog" aria-label="圖表放大檢視">
         <div class="receipt-modal-backdrop" data-close-chart-zoom="true"></div>
         <div class="receipt-modal-panel chart-zoom-panel" role="document">
@@ -330,6 +357,6 @@
 
     <script src="./assets/roc-date.js?v=3"></script>
     <script src="./assets/charts.js?v=2"></script>
-    <script src="./assets/app.js?v=14"></script>
+    <script src="./assets/app.js?v=15"></script>
 </body>
 </html>

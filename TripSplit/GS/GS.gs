@@ -47,6 +47,7 @@ function getHandlers_() {
     deleteMember: deleteMember,
     addExpense: addExpense,
     updateExpense: updateExpense,
+    addExpenseReceipts: addExpenseReceipts,
     deleteExpense: deleteExpense,
     getExpenses: getExpenses,
     syncExchangeRates: syncExchangeRates,
@@ -478,6 +479,32 @@ function updateExpense(payload) {
 
   return {
     expense: updatedRow
+  };
+}
+
+function addExpenseReceipts(payload) {
+  const expenseId = required(payload.expense_id, 'expense_id');
+  const tripId = payload.trip_id || 'trip_default';
+  const expense = findFirst(SHEET_NAMES.expenses, {
+    expense_id: expenseId
+  });
+
+  if (!expense) {
+    throw new Error('Cannot find expense: ' + expenseId);
+  }
+
+  if (String(expense.trip_id) !== String(tripId)) {
+    throw new Error('Expense does not belong to trip: ' + tripId);
+  }
+
+  const uploadedReceipts = uploadReceiptFiles(tripId, expenseId, payload.receipts || []);
+  updateObjectById_(SHEET_NAMES.expenses, 'expense_id', expenseId, {
+    updated_at: new Date()
+  });
+
+  return {
+    expense_id: expenseId,
+    receipts: uploadedReceipts
   };
 }
 

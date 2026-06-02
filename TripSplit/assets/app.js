@@ -1,5 +1,5 @@
 /* TripSplit merged app bundle. Source modules merged to keep the package under 20 files. */
-const GAS_DEPLOYMENT_ID = 'AKfycbzI3TjL_BlZp_u1t5RUFW3q7M5sff05Y16q7eFIcDkUd84SW7EALT7XisdmKM4gU_WYAg';
+const GAS_DEPLOYMENT_ID = 'AKfycbwXFk3pFKD92roXZSGT1ol6MPVu8_xr2g_ht2TEn15gYx-egjPFX2GZyUiELEFQdYtvHg';
 const GAS_WEB_APP_URL = `https://script.google.com/macros/s/${GAS_DEPLOYMENT_ID}/exec`;
 
 const GAS_WEB_APP_URLS = [GAS_WEB_APP_URL];
@@ -31,6 +31,8 @@ let expenses = [];
 let expenseReceipts = [];
 let expenseParticipants = [];
 let selectedReceiptFiles = [];
+let selectedReceiptUploadFiles = [];
+let activeReceiptUploadExpenseId = '';
 let exchangeRates = { JPY: 0.2185, USD: 32.1, KRW: 0.0235, EUR: 34.8, THB: 0.88, TWD: 1 };
 
 const MAX_RECEIPT_FILES = 5;
@@ -567,9 +569,11 @@ function buildReceiptLinks(expense) {
     const urls = Array.isArray(expense.receiptUrls) ? expense.receiptUrls : [];
     if (!urls.length) return '';
 
-    return `<div class="expense-links">${urls.map((url, index) => `
+    const viewButtons = urls.map((url, index) => `
     <button class="receipt-link" type="button" data-receipt-url="${encodeURIComponent(url)}">📷 查看照片${urls.length > 1 ? ` ${index + 1}` : ''}</button>
-  `).join('')}</div>`;
+  `).join('');
+
+    return `<div class="expense-links">${viewButtons}</div>`;
 }
 
 function payloadHasReceipts(payload) {
@@ -1144,6 +1148,115 @@ function appendReceiptFiles(files) {
     }
 
     renderReceiptPreview();
+}
+
+function renderReceiptUploadPreview() {
+    const preview = $('#receipt-upload-preview');
+    const submitButton = $('#receipt-upload-submit');
+    if (!preview) return;
+
+    preview.innerHTML = '';
+    selectedReceiptUploadFiles.forEach((file, index) => {
+        const item = document.createElement('div');
+        item.className = 'receipt-preview-item';
+
+        const img = document.createElement('img');
+        const objectUrl = URL.createObjectURL(file);
+        img.src = objectUrl;
+        img.alt = file.name;
+        img.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
+
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'receipt-preview-remove';
+        removeButton.dataset.removeUploadPreviewIndex = String(index);
+        removeButton.setAttribute('aria-label', `移除 ${file.name}`);
+        removeButton.textContent = '×';
+
+        item.appendChild(img);
+        item.appendChild(removeButton);
+        preview.appendChild(item);
+    });
+
+    preview.style.display = selectedReceiptUploadFiles.length ? 'flex' : 'none';
+    if (submitButton) submitButton.disabled = !selectedReceiptUploadFiles.length || !activeReceiptUploadExpenseId;
+}
+
+function appendReceiptUploadFiles(files) {
+    const imageFiles = Array.from(files || []).filter(file => file.type.startsWith('image/'));
+    if (!imageFiles.length) return;
+
+    const expense = getExpenseById(activeReceiptUploadExpenseId);
+    const existingCount = Array.isArray(expense?.receiptUrls) ? expense.receiptUrls.length : 0;
+    const remain = Math.max(0, MAX_RECEIPT_FILES - existingCount - selectedReceiptUploadFiles.length);
+
+    if (!remain) {
+        alert(`最多只能上傳 ${MAX_RECEIPT_FILES} 張收據照片。`);
+        return;
+    }
+
+    selectedReceiptUploadFiles = selectedReceiptUploadFiles.concat(imageFiles.slice(0, remain));
+
+    if (imageFiles.length > remain) {
+        alert(`最多只能上傳 ${MAX_RECEIPT_FILES} 張收據照片，已保留前 ${remain} 張。`);
+    }
+
+    renderReceiptUploadPreview();
+}
+
+function removeReceiptUploadFileAt(index) {
+    if (!(index >= 0) || index >= selectedReceiptUploadFiles.length) return;
+    selectedReceiptUploadFiles.splice(index, 1);
+    renderReceiptUploadPreview();
+}
+
+function clearReceiptUploadFiles() {
+    selectedReceiptUploadFiles = [];
+    renderReceiptUploadPreview();
+    if ($('#receipt-upload-files')) $('#receipt-upload-files').value = '';
+    if ($('#receipt-upload-camera-files')) $('#receipt-upload-camera-files').value = '';
+}
+
+async function getReceiptUploadPayloads() {
+    return Promise.all(selectedReceiptUploadFiles.slice(0, MAX_RECEIPT_FILES).map(fileToBase64));
+}
+
+function openReceiptUploadModal(expenseId) {
+    const expense = getExpenseById(expenseId);
+    const modal = $('#receipt-upload-modal');
+    if (!expense || !modal) return;
+
+    activeReceiptUploadExpenseId = String(expenseId || '');
+    safeSetText('#receipt-upload-title', expense.title || '支出照片');
+    safeSetText('#receipt-upload-count', `${(expense.receiptUrls || []).length} / ${MAX_RECEIPT_FILES}`);
+    clearReceiptUploadFiles();
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeReceiptUploadModal() {
+    const modal = $('#receipt-upload-modal');
+    if (!modal) return;
+
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    activeReceiptUploadExpenseId = '';
+    clearReceiptUploadFiles();
+    document.body.style.overflow = '';
+}
+
+async function submitReceiptUpload() {
+    if (!activeReceiptUploadExpenseId || !selectedReceiptUploadFiles.length) return;
+
+    const expenseId = activeReceiptUploadExpenseId;
+    const receiptPayloads = await getReceiptUploadPayloads();
+    closeReceiptUploadModal();
+    await saveThenReload('addExpenseReceipts', {
+        trip_id: currentTripId,
+        expense_id: expenseId,
+        receipts: receiptPayloads
+    }, 4500);
 }
 
 function removeReceiptFileAt(index) {
@@ -1732,6 +1845,7 @@ function renderExpenses() {
             <button class="expense-more-btn" type="button" data-expense-menu="${escapeHtml(expenseId)}" aria-expanded="${isMenuOpen}" aria-label="更多 ${escapeHtml(expense.title || '支出')} 操作">⋯</button>
             <div class="expense-action-menu${isMenuOpen ? ' open' : ''}">
               <button type="button" data-edit-expense="${escapeHtml(expenseId)}">編輯</button>
+              <button type="button" data-open-receipt-upload="${escapeHtml(expenseId)}">上傳照片</button>
               <button class="danger" type="button" data-delete-expense="${escapeHtml(expenseId)}">刪除</button>
             </div>
           </div>
@@ -2147,9 +2261,29 @@ function bindGlobalClicks() {
             return;
         }
 
+        const openReceiptUploadButton = event.target.closest('[data-open-receipt-upload]');
+        if (openReceiptUploadButton) {
+            openExpenseMenuId = '';
+            openReceiptUploadModal(openReceiptUploadButton.dataset.openReceiptUpload);
+            renderExpenses();
+            return;
+        }
+
         const closeModalButton = event.target.closest('[data-close-receipt-modal]');
         if (closeModalButton) {
             closeReceiptModal();
+            return;
+        }
+
+        const closeReceiptUploadButton = event.target.closest('[data-close-receipt-upload-modal]');
+        if (closeReceiptUploadButton) {
+            closeReceiptUploadModal();
+            return;
+        }
+
+        const uploadPreviewRemoveButton = event.target.closest('[data-remove-upload-preview-index]');
+        if (uploadPreviewRemoveButton) {
+            removeReceiptUploadFileAt(Number(uploadPreviewRemoveButton.dataset.removeUploadPreviewIndex));
             return;
         }
 
@@ -2337,6 +2471,15 @@ function bindExpenseForm() {
             appendReceiptFiles(event.target.files || []);
             event.target.value = '';
         });
+    });
+    ['#receipt-upload-files', '#receipt-upload-camera-files'].forEach(selector => {
+        $(selector)?.addEventListener('change', (event) => {
+            appendReceiptUploadFiles(event.target.files || []);
+            event.target.value = '';
+        });
+    });
+    $('#receipt-upload-submit')?.addEventListener('click', async () => {
+        await submitReceiptUpload();
     });
 
     const searchInput = $('#expense-search');
@@ -2785,6 +2928,10 @@ function bindKeyboard() {
         }
         if ($('#import-text-modal')?.classList.contains('show')) {
             closeImportTextModal();
+            return;
+        }
+        if ($('#receipt-upload-modal')?.classList.contains('show')) {
+            closeReceiptUploadModal();
             return;
         }
         if ($('#chart-zoom-modal')?.classList.contains('show') && typeof closeChartZoomModal === 'function') {

@@ -2017,6 +2017,42 @@ a:focus-visible,
     justify-content: flex-end;
 }
 
+.receipt-upload-panel {
+    width: min(92vw, 620px);
+}
+
+.receipt-upload-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.receipt-upload-header h2 {
+    font-size: 1.15rem;
+    font-weight: 950;
+    line-height: 1.25;
+}
+
+.receipt-upload-header p {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: .88rem;
+}
+
+.receipt-upload-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.receipt-upload-actions .btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .expense-edit-panel {
     width: min(94vw, 860px);
     max-height: 92vh;
