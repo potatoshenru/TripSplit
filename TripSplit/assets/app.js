@@ -35,7 +35,7 @@ let selectedReceiptUploadFiles = [];
 let activeReceiptUploadExpenseId = '';
 let exchangeRates = { JPY: 0.2185, USD: 32.1, KRW: 0.0235, EUR: 34.8, THB: 0.88, TWD: 1 };
 
-const MAX_RECEIPT_FILES = 5;
+const MAX_RECEIPT_FILES = 10;
 
 const fallbackDataByTrip = {
     trip_default: {
