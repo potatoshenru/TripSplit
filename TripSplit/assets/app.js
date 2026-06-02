@@ -33,7 +33,7 @@ let expenseParticipants = [];
 let selectedReceiptFiles = [];
 let exchangeRates = { JPY: 0.2185, USD: 32.1, KRW: 0.0235, EUR: 34.8, THB: 0.88, TWD: 1 };
 
-const MAX_RECEIPT_FILES = 4;
+const MAX_RECEIPT_FILES = 5;
 
 const fallbackDataByTrip = {
     trip_default: {
@@ -1267,7 +1267,7 @@ function renderArchivedTrips() {
 
 function renderTripHeaders() {
     const trip = currentTrip();
-    safeSetText('#hero-title', `${trip.name}｜快速記一筆花費。`);
+    safeSetText('#hero-title', `${trip.name}`);
     safeSetText('#summary-trip-title', `${trip.name}｜目前統計`);
     safeSetText('#summary-trip-id', trip.id);
     safeSetText('#expense-list-subtitle', `目前載入 ${trip.name} 的支出紀錄。`);
