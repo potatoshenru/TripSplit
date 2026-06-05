@@ -291,6 +291,22 @@ function normalizeRates(rowsOrObject) {
     return { ...exchangeRates, ...rates };
 }
 
+function pickTextField(row, fieldNames) {
+    const lowerCaseLookup = Object.keys(row || {}).reduce((lookup, key) => {
+        lookup[key.toLowerCase()] = row[key];
+        return lookup;
+    }, {});
+
+    for (const fieldName of fieldNames) {
+        const value = row[fieldName] !== undefined ? row[fieldName] : lowerCaseLookup[fieldName.toLowerCase()];
+        if (value === null || value === undefined) continue;
+        const text = String(value).trim();
+        if (text) return text;
+    }
+
+    return '';
+}
+
 function normalizeExpenses(rows, receiptRows = [], participantRows = []) {
     return rows.map(row => {
         const category = categories.find(item => item.id === row.category_id || item.name === row.category_name);
@@ -313,7 +329,7 @@ function normalizeExpenses(rows, receiptRows = [], participantRows = []) {
             rate: Number(row.exchange_rate_to_twd || row.rate || 1),
             twd: Number(row.amount_twd || 0),
             split: row.split_type || '平均分',
-            note: row.note || '',
+            note: pickTextField(row, ['note', 'notes', 'remark', 'remarks', 'memo', 'description', 'comment', 'expense_note']),
             createdAt: row.created_at || '',
             updatedAt: row.updated_at || '',
             participants: relatedParticipants.map(item => item.member_name).filter(Boolean),
@@ -574,6 +590,17 @@ function buildReceiptLinks(expense) {
   `).join('');
 
     return `<div class="expense-links">${viewButtons}</div>`;
+}
+
+function buildExpenseNote(expense) {
+    const note = String(expense?.note || '').trim();
+    if (!note) return '';
+
+    return `
+        <details class="expense-note">
+          <summary>備註</summary>
+          <p>${escapeHtml(note)}</p>
+        </details>`;
 }
 
 function payloadHasReceipts(payload) {
@@ -1789,6 +1816,7 @@ function renderExpensesLegacy() {
             <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
             <span>付款人 ${escapeHtml(expense.payer || '未設定')} · ${escapeHtml(expense.category || '未分類')} · ${escapeHtml(expense.payment || '未設定付款方式')} · ${escapeHtml(expense.currency || 'TWD')} ${money.format(Number(expense.amount || 0))} · 匯率 ${money.format(Number(expense.rate || 1))} · ${escapeHtml(expense.split || '')}</span>
             ${buildReceiptLinks(expense)}
+            ${buildExpenseNote(expense)}
           </div>
           <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
           <div class="expense-actions">
@@ -1838,6 +1866,7 @@ function renderExpenses() {
             <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
             ${buildExpenseSummary(expense)}
             ${buildReceiptLinks(expense)}
+            ${buildExpenseNote(expense)}
             <button class="expense-detail-toggle" type="button" data-toggle-expense-detail="${escapeHtml(expenseId)}" aria-expanded="${isExpanded}" aria-label="${isExpanded ? '收合' : '展開'} ${escapeHtml(expense.title || '支出')} 明細">明細 <span aria-hidden="true">${isExpanded ? '▲' : '▼'}</span></button>
           </div>
           <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
@@ -2217,9 +2246,13 @@ function bindGlobalClicks() {
             return;
         }
 
+        if (event.target.closest('.expense-note')) {
+            return;
+        }
+
         const expenseDetailButton = event.target.closest('[data-toggle-expense-detail]');
         const expenseCard = event.target.closest('[data-expense-card]');
-        const shouldToggleCard = expenseCard && !event.target.closest('button, a, input, select, textarea');
+        const shouldToggleCard = expenseCard && !event.target.closest('button, a, input, select, textarea, details, summary');
         if (expenseDetailButton || shouldToggleCard) {
             const expenseId = expenseDetailButton?.dataset.toggleExpenseDetail || expenseCard?.dataset.expenseCard || '';
             if (expandedExpenseIds.has(expenseId)) expandedExpenseIds.delete(expenseId);

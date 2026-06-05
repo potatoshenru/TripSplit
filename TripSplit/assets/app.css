@@ -1289,6 +1289,37 @@ a:focus-visible,
     font-size: .84rem;
 }
 
+.expense-note {
+    max-width: 100%;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: 1px solid rgba(214, 176, 123, .62);
+    border-radius: 12px;
+    background: #fffaf2;
+    color: #5f4a35;
+    font-size: .84rem;
+}
+
+.expense-note summary {
+    width: fit-content;
+    cursor: pointer;
+    color: var(--primary-dark);
+    font-weight: 950;
+    line-height: 1.35;
+}
+
+.expense-note summary:hover {
+    color: var(--primary);
+}
+
+.expense-note p {
+    margin: 7px 0 0;
+    color: #5f4a35;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
 .expense-amount {
     text-align: right;
     white-space: nowrap;
