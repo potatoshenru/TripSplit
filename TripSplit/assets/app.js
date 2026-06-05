@@ -1312,6 +1312,10 @@ let expenseFilters = {
     from: '',
     to: ''
 };
+const EXPENSE_TABLE_PAGE_SIZE = 10;
+let expenseViewMode = 'card';
+let expenseTablePage = 1;
+let selectedExpenseTableDetailId = '';
 let expandedExpenseIds = new Set();
 let openExpenseMenuId = '';
 let pendingExpenseResetCurrency = '';
@@ -1784,6 +1788,316 @@ function groupExpensesByDate(visibleExpenses) {
     }, new Map());
 }
 
+function hasActiveExpenseFilters() {
+    return Boolean(expenseSearchTerm || Object.values(expenseFilters).some(Boolean));
+}
+
+function clampExpenseTablePage(totalExpenses) {
+    const totalPages = Math.max(1, Math.ceil(totalExpenses / EXPENSE_TABLE_PAGE_SIZE));
+    expenseTablePage = Math.min(Math.max(1, expenseTablePage), totalPages);
+    return totalPages;
+}
+
+function setExpenseViewMode(mode) {
+    if (!['card', 'table'].includes(mode)) return;
+    const isChangingToTable = expenseViewMode !== 'table' && mode === 'table';
+    expenseViewMode = mode;
+    openExpenseMenuId = '';
+    if (isChangingToTable) {
+        expenseTablePage = 1;
+        selectedExpenseTableDetailId = '';
+    }
+    renderExpenses();
+}
+
+function setExpenseTablePage(page) {
+    const visibleExpenses = getVisibleExpenses();
+    const totalPages = clampExpenseTablePage(visibleExpenses.length);
+    const nextPage = page === 'prev'
+        ? expenseTablePage - 1
+        : page === 'next'
+            ? expenseTablePage + 1
+            : Number(page);
+
+    if (!Number.isFinite(nextPage)) return;
+    expenseTablePage = Math.min(Math.max(1, nextPage), totalPages);
+    selectedExpenseTableDetailId = '';
+    renderExpenses();
+}
+
+function openExpenseTableDetail(expenseId) {
+    selectedExpenseTableDetailId = String(expenseId || '');
+    openExpenseMenuId = '';
+    renderExpenses();
+}
+
+function closeExpenseTableDetail() {
+    selectedExpenseTableDetailId = '';
+    renderExpenses();
+}
+
+function resetExpenseTableBrowsing() {
+    expenseTablePage = 1;
+    selectedExpenseTableDetailId = '';
+    openExpenseMenuId = '';
+}
+
+function buildExpenseViewControls(visibleCount) {
+    return `
+        <div class="expense-view-controls" aria-label="支出檢視切換">
+          <div>
+            <strong>檢視模式</strong>
+            <span>${visibleCount} 筆符合條件</span>
+          </div>
+          <div class="expense-view-toggle" role="group" aria-label="切換支出清單檢視">
+            <button type="button" data-expense-view-mode="card" aria-pressed="${expenseViewMode === 'card'}" class="${expenseViewMode === 'card' ? 'active' : ''}">卡片檢視</button>
+            <button type="button" data-expense-view-mode="table" aria-pressed="${expenseViewMode === 'table'}" class="${expenseViewMode === 'table' ? 'active' : ''}">表格檢視</button>
+          </div>
+        </div>`;
+}
+
+function formatExpenseTableDate(expense) {
+    const dateKey = toExpenseDateKey(expense.date);
+    return formatRocDate(dateKey) || dateKey || '未設定';
+}
+
+function formatExpenseCreatedAt(expense) {
+    const value = expense.createdAt || expense.updatedAt || '';
+    if (!value) return '未提供';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function getExpenseParticipantCount(expense) {
+    const details = Array.isArray(expense.splitDetails) ? expense.splitDetails.filter(item => item.member_name) : [];
+    if (details.length) return details.length;
+    return Array.isArray(expense.participants) ? expense.participants.filter(Boolean).length : 0;
+}
+
+function getExpenseAverageShare(expense) {
+    const details = Array.isArray(expense.splitDetails) ? expense.splitDetails : [];
+    const shares = details.map(item => Number(item.share_amount_twd || 0)).filter(value => value > 0);
+    if (shares.length) return shares.reduce((sum, value) => sum + value, 0) / shares.length;
+
+    const participantCount = getExpenseParticipantCount(expense);
+    return participantCount ? Number(expense.twd || 0) / participantCount : 0;
+}
+
+function buildExpenseStatusBadge(label, isActive) {
+    return `<span class="expense-table-badge${isActive ? ' active' : ''}">${label}</span>`;
+}
+
+function buildExpenseTablePagination(totalPages, visibleCount) {
+    if (totalPages <= 1) return '';
+
+    const start = (expenseTablePage - 1) * EXPENSE_TABLE_PAGE_SIZE + 1;
+    const end = Math.min(visibleCount, expenseTablePage * EXPENSE_TABLE_PAGE_SIZE);
+    const pageStart = Math.max(1, Math.min(expenseTablePage - 2, totalPages - 4));
+    const pageEnd = Math.min(totalPages, pageStart + 4);
+    const pageButtons = Array.from({ length: pageEnd - pageStart + 1 }, (_, index) => pageStart + index)
+        .map(page => `<button type="button" data-expense-table-page="${page}" class="${page === expenseTablePage ? 'active' : ''}" aria-current="${page === expenseTablePage ? 'page' : 'false'}">${page}</button>`)
+        .join('');
+    const leadingPage = pageStart > 1 ? '<span class="expense-page-gap">…</span>' : '';
+    const trailingPage = pageEnd < totalPages ? '<span class="expense-page-gap">…</span>' : '';
+
+    return `
+        <div class="expense-table-pagination" aria-label="表格分頁">
+          <span>第 ${expenseTablePage} / ${totalPages} 頁 · ${start}-${end} / ${visibleCount}</span>
+          <div>
+            <button type="button" data-expense-table-page="prev" ${expenseTablePage <= 1 ? 'disabled' : ''}>上一頁</button>
+            <div class="expense-page-numbers">${leadingPage}${pageButtons}${trailingPage}</div>
+            <button type="button" data-expense-table-page="next" ${expenseTablePage >= totalPages ? 'disabled' : ''}>下一頁</button>
+          </div>
+        </div>`;
+}
+
+function buildExpenseDetailNote(expense) {
+    const note = String(expense?.note || '').trim();
+    if (!note) return '<p class="expense-table-detail-empty">沒有備註</p>';
+    return `<div class="expense-table-detail-note">${escapeHtml(note)}</div>`;
+}
+
+function buildExpenseTableDetailPanel(expense) {
+    if (!expense) return '';
+    const expenseId = String(expense.id || '');
+    const receiptCount = Array.isArray(expense.receiptUrls) ? expense.receiptUrls.length : 0;
+    const participantCount = getExpenseParticipantCount(expense);
+    const isMenuOpen = openExpenseMenuId === expenseId;
+
+    return `
+        <section class="expense-table-detail-panel" aria-label="${escapeHtml(expense.title || '支出')} 完整細項">
+          <div class="expense-table-detail-head">
+            <div>
+              <span class="expense-table-detail-kicker">支出細項</span>
+              <h3>${escapeHtml(expense.title || '未命名支出')}</h3>
+              <p>${escapeHtml(formatExpenseTableDate(expense))} · ${escapeHtml(expense.category || '未分類')} · ${escapeHtml(expense.payment || '未設定付款方式')}</p>
+            </div>
+            <div class="expense-table-detail-head-actions">
+              <div class="expense-actions">
+                <button class="expense-more-btn" type="button" data-expense-menu="${escapeHtml(expenseId)}" aria-expanded="${isMenuOpen}" aria-label="更多 ${escapeHtml(expense.title || '支出')} 操作">⋯</button>
+                <div class="expense-action-menu${isMenuOpen ? ' open' : ''}">
+                  <button type="button" data-edit-expense="${escapeHtml(expenseId)}">編輯</button>
+                  <button type="button" data-open-receipt-upload="${escapeHtml(expenseId)}">上傳照片</button>
+                </div>
+              </div>
+              <button class="expense-table-detail-close" type="button" data-close-expense-table-detail="true" aria-label="關閉支出細項">×</button>
+            </div>
+          </div>
+          <div class="expense-table-detail-stats">
+            <div><span>台幣金額</span><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
+            <div><span>原始金額</span><strong>${escapeHtml(expense.currency || 'TWD')} ${money.format(Number(expense.amount || 0))}</strong></div>
+            <div><span>付款人</span><strong>${escapeHtml(expense.payer || '未設定')}</strong></div>
+            <div><span>參與者</span><strong>${participantCount || 0} 人</strong></div>
+          </div>
+          ${buildExpenseSummary(expense)}
+          <div class="expense-table-detail-grid">
+            <section>
+              <h4>備註</h4>
+              ${buildExpenseDetailNote(expense)}
+            </section>
+            <section>
+              <h4>照片</h4>
+              ${receiptCount ? buildReceiptLinks(expense) : '<p class="expense-table-detail-empty">沒有照片</p>'}
+            </section>
+          </div>
+          ${buildExpenseDetail(expense)}
+          <div class="expense-table-detail-meta">
+            <span>匯率 ${money.format(Number(expense.rate || 1))}</span>
+            <span>分帳方式 ${escapeHtml(expense.split || '未設定')}</span>
+            <span>建立時間 ${escapeHtml(formatExpenseCreatedAt(expense))}</span>
+          </div>
+        </section>`;
+}
+
+function buildExpenseTableView(visibleExpenses) {
+    if (!visibleExpenses.length) {
+        return `<p class="field-hint">${hasActiveExpenseFilters() ? '沒有符合篩選條件的支出。' : '目前還沒有支出紀錄。'}</p>`;
+    }
+
+    const totalPages = clampExpenseTablePage(visibleExpenses.length);
+    if (selectedExpenseTableDetailId && !visibleExpenses.some(expense => String(expense.id) === selectedExpenseTableDetailId)) {
+        selectedExpenseTableDetailId = '';
+    }
+
+    const startIndex = (expenseTablePage - 1) * EXPENSE_TABLE_PAGE_SIZE;
+    const pageRows = visibleExpenses.slice(startIndex, startIndex + EXPENSE_TABLE_PAGE_SIZE);
+    const selectedExpense = selectedExpenseTableDetailId ? getExpenseById(selectedExpenseTableDetailId) : null;
+    const rows = pageRows.map(expense => {
+        const expenseId = String(expense.id || '');
+        const title = expense.title || '未命名支出';
+        const participantCount = getExpenseParticipantCount(expense);
+        const receiptCount = Array.isArray(expense.receiptUrls) ? expense.receiptUrls.length : 0;
+        const hasNote = Boolean(String(expense.note || '').trim());
+        const isSelected = selectedExpenseTableDetailId === expenseId;
+        return `
+            <tr class="${isSelected ? 'selected' : ''}" tabindex="0" data-open-expense-table-detail="${escapeHtml(expenseId)}" aria-selected="${isSelected}">
+              <td data-label="日期">${escapeHtml(formatExpenseTableDate(expense))}</td>
+              <td data-label="分類"><span class="expense-table-category">${escapeHtml(expense.icon || '')} ${escapeHtml(expense.category || '未分類')}</span></td>
+              <td class="expense-table-title" data-label="項目名稱" title="${escapeHtml(title)}"><span>${escapeHtml(title)}</span></td>
+              <td data-label="付款人" title="${escapeHtml(expense.payer || '未設定')}">${escapeHtml(expense.payer || '未設定')}</td>
+              <td class="numeric" data-label="原始金額"><span>${escapeHtml(expense.currency || 'TWD')} ${money.format(Number(expense.amount || 0))}</span><small>匯率 ${money.format(Number(expense.rate || 1))}</small></td>
+              <td class="numeric strong" data-label="台幣金額">NT$ ${money.format(Math.round(expense.twd || 0))}</td>
+              <td class="numeric" data-label="平均分攤">NT$ ${money.format(Math.round(getExpenseAverageShare(expense) || 0))}</td>
+              <td data-label="參與者">${participantCount || 0} 人</td>
+              <td data-label="照片">${buildExpenseStatusBadge(receiptCount ? `${receiptCount} 張` : '無', receiptCount > 0)}</td>
+              <td data-label="備註">${buildExpenseStatusBadge(hasNote ? '有' : '無', hasNote)}</td>
+              <td data-label="操作"><button class="expense-table-action" type="button" data-open-expense-table-detail="${escapeHtml(expenseId)}">查看細項</button></td>
+            </tr>`;
+    }).join('');
+
+    return `
+        <div class="expense-table-shell">
+          <div class="expense-table-scroll" tabindex="0" aria-label="支出表格，可左右捲動">
+            <table class="expense-table">
+              <colgroup>
+                <col class="expense-table-col-date" />
+                <col class="expense-table-col-category" />
+                <col class="expense-table-col-title" />
+                <col class="expense-table-col-payer" />
+                <col class="expense-table-col-original" />
+                <col class="expense-table-col-twd" />
+                <col class="expense-table-col-share" />
+                <col class="expense-table-col-count" />
+                <col class="expense-table-col-photo" />
+                <col class="expense-table-col-note" />
+                <col class="expense-table-col-action" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">日期</th>
+                  <th scope="col">分類</th>
+                  <th scope="col">項目名稱</th>
+                  <th scope="col">付款人</th>
+                  <th scope="col" class="numeric">原始金額</th>
+                  <th scope="col" class="numeric">台幣金額</th>
+                  <th scope="col" class="numeric">平均分攤</th>
+                  <th scope="col">參與者</th>
+                  <th scope="col">照片</th>
+                  <th scope="col">備註</th>
+                  <th scope="col">操作</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          ${buildExpenseTablePagination(totalPages, visibleExpenses.length)}
+          ${buildExpenseTableDetailPanel(selectedExpense)}
+        </div>`;
+}
+
+function buildExpenseCardView(visibleExpenses) {
+    const groupedExpenses = groupExpensesByDate(visibleExpenses);
+    return Array.from(groupedExpenses.entries()).map(([dateKey, dayExpenses]) => {
+        const dayTotal = dayExpenses.reduce((sum, expense) => sum + Number(expense.twd || 0), 0);
+        return `
+    <section class="expense-day-group">
+      <div class="expense-day-header">
+        <div>
+          <strong>${formatExpenseDateHeading(dateKey)}</strong>
+          <span>${dayExpenses.length} 筆支出</span>
+        </div>
+        <strong>NT$ ${money.format(Math.round(dayTotal))}</strong>
+      </div>
+      <div class="expense-day-list">
+        ${dayExpenses.map(expense => {
+            const expenseId = String(expense.id || '');
+            const isExpanded = expandedExpenseIds.has(expenseId);
+            const isMenuOpen = openExpenseMenuId === expenseId;
+            return `
+        <article class="expense-item${isExpanded ? ' is-expanded' : ''}" data-expense-card="${escapeHtml(expenseId)}">
+          <div class="expense-icon">${escapeHtml(expense.icon || '')}</div>
+          <div class="expense-meta">
+            <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
+            ${buildExpenseSummary(expense)}
+            ${buildReceiptLinks(expense)}
+            ${buildExpenseNote(expense)}
+            <button class="expense-detail-toggle" type="button" data-toggle-expense-detail="${escapeHtml(expenseId)}" aria-expanded="${isExpanded}" aria-label="${isExpanded ? '收合' : '展開'} ${escapeHtml(expense.title || '支出')} 明細">明細 <span aria-hidden="true">${isExpanded ? '▲' : '▼'}</span></button>
+          </div>
+          <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
+          <div class="expense-actions">
+            <button class="expense-more-btn" type="button" data-expense-menu="${escapeHtml(expenseId)}" aria-expanded="${isMenuOpen}" aria-label="更多 ${escapeHtml(expense.title || '支出')} 操作">⋯</button>
+            <div class="expense-action-menu${isMenuOpen ? ' open' : ''}">
+              <button type="button" data-edit-expense="${escapeHtml(expenseId)}">編輯</button>
+              <button type="button" data-open-receipt-upload="${escapeHtml(expenseId)}">上傳照片</button>
+              <button class="danger" type="button" data-delete-expense="${escapeHtml(expenseId)}">刪除</button>
+            </div>
+          </div>
+          ${isExpanded ? buildExpenseDetail(expense) : ''}
+        </article>
+        `;
+        }).join('')}
+      </div>
+    </section>`;
+    }).join('') || `<p class="field-hint">${hasActiveExpenseFilters() ? '沒有符合篩選條件的支出。' : '目前還沒有支出紀錄。'}</p>`;
+}
+
 function renderExpensesLegacy() {
     const list = $('#expense-list');
     const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
@@ -1840,51 +2154,11 @@ function renderExpenses() {
     renderExpenseFilters();
 
     const visibleExpenses = getVisibleExpenses();
-    const groupedExpenses = groupExpensesByDate(visibleExpenses);
-    const hasActiveFilters = Boolean(expenseSearchTerm || Object.values(expenseFilters).some(Boolean));
+    const body = expenseViewMode === 'table'
+        ? buildExpenseTableView(visibleExpenses)
+        : buildExpenseCardView(visibleExpenses);
 
-    list.innerHTML = Array.from(groupedExpenses.entries()).map(([dateKey, dayExpenses]) => {
-        const dayTotal = dayExpenses.reduce((sum, expense) => sum + Number(expense.twd || 0), 0);
-        return `
-    <section class="expense-day-group">
-      <div class="expense-day-header">
-        <div>
-          <strong>${formatExpenseDateHeading(dateKey)}</strong>
-          <span>${dayExpenses.length} 筆支出</span>
-        </div>
-        <strong>NT$ ${money.format(Math.round(dayTotal))}</strong>
-      </div>
-      <div class="expense-day-list">
-        ${dayExpenses.map(expense => {
-            const expenseId = String(expense.id || '');
-            const isExpanded = expandedExpenseIds.has(expenseId);
-            const isMenuOpen = openExpenseMenuId === expenseId;
-            return `
-        <article class="expense-item${isExpanded ? ' is-expanded' : ''}" data-expense-card="${escapeHtml(expenseId)}">
-          <div class="expense-icon">${escapeHtml(expense.icon || '')}</div>
-          <div class="expense-meta">
-            <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
-            ${buildExpenseSummary(expense)}
-            ${buildReceiptLinks(expense)}
-            ${buildExpenseNote(expense)}
-            <button class="expense-detail-toggle" type="button" data-toggle-expense-detail="${escapeHtml(expenseId)}" aria-expanded="${isExpanded}" aria-label="${isExpanded ? '收合' : '展開'} ${escapeHtml(expense.title || '支出')} 明細">明細 <span aria-hidden="true">${isExpanded ? '▲' : '▼'}</span></button>
-          </div>
-          <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
-          <div class="expense-actions">
-            <button class="expense-more-btn" type="button" data-expense-menu="${escapeHtml(expenseId)}" aria-expanded="${isMenuOpen}" aria-label="更多 ${escapeHtml(expense.title || '支出')} 操作">⋯</button>
-            <div class="expense-action-menu${isMenuOpen ? ' open' : ''}">
-              <button type="button" data-edit-expense="${escapeHtml(expenseId)}">編輯</button>
-              <button type="button" data-open-receipt-upload="${escapeHtml(expenseId)}">上傳照片</button>
-              <button class="danger" type="button" data-delete-expense="${escapeHtml(expenseId)}">刪除</button>
-            </div>
-          </div>
-          ${isExpanded ? buildExpenseDetail(expense) : ''}
-        </article>
-        `;
-        }).join('')}
-      </div>
-    </section>`;
-    }).join('') || `<p class="field-hint">${hasActiveFilters ? '沒有符合篩選條件的支出。' : '目前還沒有支出紀錄。'}</p>`;
+    list.innerHTML = `${buildExpenseViewControls(visibleExpenses.length)}${body}`;
 }
 
 function getExpenseById(expenseId) {
@@ -2238,6 +2512,30 @@ function bindGlobalClicks() {
 
         if (!event.target.closest('.icon-select')) closeIconSelects();
 
+        const expenseViewModeButton = event.target.closest('[data-expense-view-mode]');
+        if (expenseViewModeButton) {
+            setExpenseViewMode(expenseViewModeButton.dataset.expenseViewMode || 'card');
+            return;
+        }
+
+        const expenseTablePageButton = event.target.closest('[data-expense-table-page]');
+        if (expenseTablePageButton && !expenseTablePageButton.disabled) {
+            setExpenseTablePage(expenseTablePageButton.dataset.expenseTablePage);
+            return;
+        }
+
+        const expenseTableDetailClose = event.target.closest('[data-close-expense-table-detail]');
+        if (expenseTableDetailClose) {
+            closeExpenseTableDetail();
+            return;
+        }
+
+        const expenseTableDetailTrigger = event.target.closest('[data-open-expense-table-detail]');
+        if (expenseTableDetailTrigger) {
+            openExpenseTableDetail(expenseTableDetailTrigger.dataset.openExpenseTableDetail);
+            return;
+        }
+
         const expenseMenuButton = event.target.closest('[data-expense-menu]');
         if (expenseMenuButton) {
             const menuId = expenseMenuButton.dataset.expenseMenu || '';
@@ -2519,6 +2817,7 @@ function bindExpenseForm() {
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             expenseSearchTerm = searchInput.value || '';
+            resetExpenseTableBrowsing();
             renderExpenses();
         });
     }
@@ -2547,6 +2846,7 @@ function bindExpenseForm() {
                     setRocDateValue(toInput, '');
                 }
             }
+            resetExpenseTableBrowsing();
             renderExpenses();
         });
     });
@@ -2559,6 +2859,7 @@ function bindExpenseForm() {
             const input = $(selector);
             setRocDateValue(input, '');
         });
+        resetExpenseTableBrowsing();
         renderExpenses();
     });
 
@@ -2944,8 +3245,38 @@ function bindImportTextModal() {
 }
 
 // ── End 匯入文字品項 Modal ───────────────────────────────────────────────────
+function isTextEntryTarget(target) {
+    return Boolean(target?.closest?.('input, textarea, select') || target?.isContentEditable);
+}
+
 function bindKeyboard() {
     document.addEventListener('keydown', (event) => {
+        const hasOpenModal = $('#expense-edit-modal')?.classList.contains('show') ||
+            $('#import-text-modal')?.classList.contains('show') ||
+            $('#receipt-upload-modal')?.classList.contains('show') ||
+            $('#receipt-modal')?.classList.contains('show') ||
+            $('#chart-zoom-modal')?.classList.contains('show');
+
+        if (expenseViewMode === 'table' && !hasOpenModal && !isTextEntryTarget(event.target)) {
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                const totalPages = Math.max(1, Math.ceil(getVisibleExpenses().length / EXPENSE_TABLE_PAGE_SIZE));
+                if (totalPages > 1) {
+                    event.preventDefault();
+                    setExpenseTablePage(event.key === 'ArrowLeft' ? 'prev' : 'next');
+                    return;
+                }
+            }
+
+            if (event.key === 'Enter' || event.key === ' ') {
+                const row = event.target.closest?.('tr[data-open-expense-table-detail]');
+                if (row) {
+                    event.preventDefault();
+                    openExpenseTableDetail(row.dataset.openExpenseTableDetail);
+                    return;
+                }
+            }
+        }
+
         if (event.key !== 'Escape') return;
         if (activeRocDateInput) {
             closeRocDatePicker();
@@ -2972,6 +3303,7 @@ function bindKeyboard() {
             return;
         }
         if ($('#receipt-modal')?.classList.contains('show')) closeReceiptModal();
+        if (selectedExpenseTableDetailId) closeExpenseTableDetail();
     });
 }
 
