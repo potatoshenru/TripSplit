@@ -283,6 +283,42 @@ h1 {
     display: none !important;
 }
 
+.preview-mode [data-dashboard-tab="quick"],
+.preview-mode #expense-form,
+.preview-mode a[href*="settings.html"],
+.preview-mode a[href="#expense-form"],
+.preview-mode #open-import-text-btn,
+.preview-mode #archive-trip-btn,
+.preview-mode [data-edit-expense],
+.preview-mode [data-delete-expense],
+.preview-mode [data-open-receipt-upload],
+.preview-mode [data-expense-menu],
+.preview-mode .expense-action-menu,
+.preview-mode .expense-actions,
+.preview-mode [data-remove],
+.preview-mode [data-unarchive-trip],
+.preview-mode [data-remove-preview-index],
+.preview-mode [data-remove-upload-preview-index],
+.preview-mode #trip-create-form,
+.preview-mode #member-form,
+.preview-mode #category-form,
+.preview-mode #payment-form {
+    display: none !important;
+}
+
+.preview-mode .dashboard-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.preview-mode #trip-switch-form {
+    opacity: .72;
+}
+
+    .preview-mode #trip-switch-form .icon-select-trigger,
+    .preview-mode #trip-switch-form .icon-select-option {
+        pointer-events: none;
+    }
+
 .settings-layout {
     display: grid;
     grid-template-columns: 250px minmax(0, 1fr);
@@ -850,6 +886,30 @@ a:focus-visible,
     font-weight: 900;
 }
 
+.preview-mode-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    padding: 13px 16px;
+    border-radius: 16px;
+    color: #244c25;
+    background: #edf8ec;
+    border: 1px solid #b8dbb5;
+    box-shadow: var(--shadow-soft);
+    font-size: .94rem;
+    font-weight: 850;
+}
+
+    .preview-mode-banner strong {
+        flex: 0 0 auto;
+        font-weight: 950;
+    }
+
+    .preview-mode-banner span {
+        min-width: 0;
+    }
+
 .status-dot {
     width: 10px;
     height: 10px;
@@ -883,6 +943,39 @@ a:focus-visible,
     border: 1px solid var(--line);
     border-radius: 18px;
     background: var(--surface-strong);
+}
+
+.archived-trip-row {
+    align-items: center;
+}
+
+.archived-trip-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.archived-preview-copy {
+    min-height: 36px;
+    padding: 7px 12px;
+    border-radius: 12px;
+    font-size: .86rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+    .archived-trip-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .archived-trip-actions {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
 }
 
 .list-info {
@@ -1349,14 +1442,14 @@ a:focus-visible,
     font-weight: 950;
 }
 
-.expense-table-title span {
-    display: -webkit-box;
-    line-height: 1.35;
-    white-space: normal;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-}
+    .expense-table-title span {
+        display: -webkit-box;
+        line-height: 1.35;
+        white-space: normal;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+    }
 
 .expense-table-category {
     display: block;
@@ -3270,17 +3363,17 @@ a:focus-visible,
         -webkit-line-clamp: unset;
     }
 
-    .expense-table-title span {
-        display: block;
-        overflow: visible;
-        -webkit-line-clamp: unset;
-    }
+        .expense-table-title span {
+            display: block;
+            overflow: visible;
+            -webkit-line-clamp: unset;
+        }
 
-    .expense-table-title::before {
-        content: attr(data-label);
-        color: var(--muted);
-        font-size: .76rem;
-        font-weight: 950;
+        .expense-table-title::before {
+            content: attr(data-label);
+            color: var(--muted);
+            font-size: .76rem;
+            font-weight: 950;
         }
 
     .expense-table .numeric {

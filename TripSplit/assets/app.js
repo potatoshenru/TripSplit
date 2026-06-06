@@ -14,10 +14,30 @@ function buildGasUrl(baseUrl, query) {
 }
 
 const TRIP_SELECTION_MODE_KEY = 'tripsplit_trip_selection_mode';
+const isPreviewMode = new URLSearchParams(window.location.search).get('preview') === '1';
+const previewTripIdFromUrl = getPreviewTripIdFromUrl();
 const storedTripId = localStorage.getItem('tripsplit_current_trip_id');
 const storedTripSelectionMode = localStorage.getItem(TRIP_SELECTION_MODE_KEY);
-let currentTripId = storedTripId || 'trip_default';
-let shouldSelectLatestTripOnLoad = storedTripSelectionMode !== 'manual';
+let currentTripId = isPreviewMode ? previewTripIdFromUrl : (storedTripId || 'trip_default');
+let shouldSelectLatestTripOnLoad = !isPreviewMode && storedTripSelectionMode !== 'manual';
+
+const READONLY_GAS_ACTIONS = new Set(['getTrips', 'getArchivedTrips', 'getInitialData']);
+const PREVIEW_MUTATION_SELECTOR = [
+    '[data-delete-expense]',
+    '[data-edit-expense]',
+    '[data-open-receipt-upload]',
+    '#receipt-upload-submit',
+    '[data-remove-upload-preview-index]',
+    '[data-remove-preview-index]',
+    '#archive-trip-btn',
+    '[data-unarchive-trip]',
+    '[data-remove]',
+    '#open-import-text-btn',
+    '#parse-import-text-btn',
+    '#import-text-current-btn',
+    '[data-import-item]',
+    '[data-remove-import-item]'
+].join(',');
 
 let trips = [
     { id: 'trip_default', name: '東京五日遊', baseCurrency: 'TWD' },
@@ -72,6 +92,35 @@ const money = new Intl.NumberFormat('zh-TW');
 const $ = (selector) => document.querySelector(selector);
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+function getPreviewTripIdFromUrl() {
+    return new URLSearchParams(window.location.search).get('trip_id') || '';
+}
+
+function buildArchivedTripPreviewUrl(tripId) {
+    const baseUrl = new URL('TripSplit.html', window.location.href);
+    baseUrl.search = '';
+    baseUrl.hash = '';
+    return `${baseUrl.href}?preview=1&trip_id=${encodeURIComponent(String(tripId || ''))}#expenses`;
+}
+
+async function copyTextToClipboard(text) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand('copy');
+    textarea.remove();
+    if (!copied) throw new Error('Clipboard copy failed');
+}
+
 function formatTwd(value) {
     return `NT$ ${money.format(Math.round(Math.abs(Number(value || 0))))}`;
 }
@@ -96,7 +145,20 @@ function markTripModified(tripId) {
 }
 
 function currentTrip() {
-    return trips.find(trip => trip.id === currentTripId) || trips[0];
+    const activeTrip = trips.find(trip => trip.id === currentTripId);
+    if (activeTrip) return activeTrip;
+
+    if (isPreviewMode) {
+        const archivedTrip = archivedTrips.find(trip => trip.id === currentTripId);
+        if (archivedTrip) return archivedTrip;
+        return {
+            id: currentTripId || '',
+            name: currentTripId ? `帳本 ${currentTripId}` : '未指定帳本',
+            baseCurrency: 'TWD'
+        };
+    }
+
+    return trips[0] || { id: currentTripId || '', name: 'TripSplit', baseCurrency: 'TWD' };
 }
 
 function setStatus(message, type = 'info') {
@@ -107,7 +169,36 @@ function setStatus(message, type = 'info') {
     notice.innerHTML = `<span class="status-dot" style="background:${dotColor}"></span>${message}`;
 }
 
+function throwReadonlyPreviewAction(action = '') {
+    const message = '唯讀預覽模式不能修改資料。';
+    setStatus(message, 'error');
+    const error = new Error(message);
+    error.code = 'TRIPSPLIT_PREVIEW_READONLY';
+    error.action = action;
+    throw error;
+}
+
+function guardReadonlyAction(event, message = '唯讀預覽模式不能修改資料。') {
+    if (!isPreviewMode) return false;
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    event?.stopImmediatePropagation?.();
+    setStatus(message, 'error');
+    return true;
+}
+
+function clearLoadedTripData() {
+    members = [];
+    categories = [];
+    paymentMethods = [];
+    expenses = [];
+    expenseReceipts = [];
+    expenseParticipants = [];
+}
+
 async function postToGas(action, payload = {}, options = {}) {
+    if (isPreviewMode && !READONLY_GAS_ACTIONS.has(action)) throwReadonlyPreviewAction(action);
+
     const timeoutMs = Number.isFinite(options.timeoutMs) ? Math.max(3000, options.timeoutMs) : 12000;
 
     let lastError = null;
@@ -138,6 +229,8 @@ async function postToGas(action, payload = {}, options = {}) {
 }
 
 async function jsonp(action, payload = {}, options = {}) {
+    if (isPreviewMode && !READONLY_GAS_ACTIONS.has(action)) throwReadonlyPreviewAction(action);
+
     const maxRetries = Number.isFinite(options.maxRetries) ? Math.max(0, options.maxRetries) : 1;
     const timeoutMs = Number.isFinite(options.timeoutMs) ? Math.max(3000, options.timeoutMs) : 15000;
 
@@ -229,6 +322,8 @@ async function jsonp(action, payload = {}, options = {}) {
 }
 
 async function postToGasBlind(action, payload = {}, options = {}) {
+    if (isPreviewMode && !READONLY_GAS_ACTIONS.has(action)) throwReadonlyPreviewAction(action);
+
     const timeoutMs = Number.isFinite(options.timeoutMs) ? Math.max(5000, options.timeoutMs) : 30000;
     const endpoint = GAS_WEB_APP_URLS[0];
 
@@ -477,16 +572,16 @@ async function loadTrips() {
         console.warn(error);
     }
 
-    if (shouldSelectLatestTripOnLoad) {
+    if (!isPreviewMode && shouldSelectLatestTripOnLoad) {
         currentTripId = getLatestTripId() || currentTripId;
         localStorage.setItem('tripsplit_current_trip_id', currentTripId);
         localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'auto');
         shouldSelectLatestTripOnLoad = false;
     }
 
-    if (!trips.some(trip => trip.id === currentTripId)) currentTripId = trips[0].id;
+    if (!isPreviewMode && !trips.some(trip => trip.id === currentTripId)) currentTripId = trips[0]?.id || currentTripId;
     renderTripSelect();
-    loadArchivedTrips();
+    await loadArchivedTrips();
 }
 
 function normalizeTrip(row) {
@@ -539,6 +634,13 @@ async function loadArchivedTrips() {
 }
 
 async function loadCurrentTripData() {
+    if (isPreviewMode && !currentTripId) {
+        clearLoadedTripData();
+        renderAll();
+        setStatus('預覽連結缺少 trip_id，無法載入帳本資料。', 'error');
+        return;
+    }
+
     setStatus(`正在讀取「${currentTrip().name}」資料...`);
     try {
         const data = await jsonp('getInitialData', { trip_id: currentTripId });
@@ -546,6 +648,14 @@ async function loadCurrentTripData() {
         setStatus(`已切換到「${currentTrip().name}」。`, 'success');
     } catch (error) {
         console.warn(error);
+        if (isPreviewMode) {
+            clearLoadedTripData();
+            renderAll();
+            updateFormDisabledState();
+            setStatus('無法載入預覽帳本，請確認連結是否完整或帳本仍存在。', 'error');
+            return;
+        }
+
         applyFallbackData();
         const blockedByClient = error && error.code === 'GAS_JSONP_LOAD';
         if (blockedByClient) {
@@ -559,6 +669,7 @@ async function loadCurrentTripData() {
 }
 
 function applyLoadedData(data) {
+    data = data || {};
     members = normalizeMembers(data.members || []);
     categories = normalizeCategories(data.categories || []);
     paymentMethods = normalizePaymentMethods(data.paymentMethods || data.payment_methods || []);
@@ -568,7 +679,7 @@ function applyLoadedData(data) {
     expenses = normalizeExpenses(data.expenses || [], expenseReceipts, expenseParticipants);
 
     // 只有在 fallback 中有對應 trip 且 GAS 沒回傳資料時才使用 fallback
-    if ((!members.length || !categories.length || !paymentMethods.length) && fallbackDataByTrip[currentTripId]) {
+    if (!isPreviewMode && (!members.length || !categories.length || !paymentMethods.length) && fallbackDataByTrip[currentTripId]) {
         applyFallbackData({ keepExpenses: Boolean(expenses.length) });
     }
 }
@@ -612,6 +723,8 @@ function payloadHasReceipts(payload) {
 }
 
 async function saveThenReload(action, payload, delay = 900) {
+    if (isPreviewMode) throwReadonlyPreviewAction(action);
+
     const hasReceipts = payloadHasReceipts(payload);
 
     setStatus(hasReceipts ? '正在上傳收據並寫入 Google Sheet...' : '正在寫入 Google Sheet...');
@@ -1158,6 +1271,11 @@ function renderReceiptPreview() {
 }
 
 function appendReceiptFiles(files) {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return;
+    }
+
     const imageFiles = Array.from(files || []).filter(file => file.type.startsWith('image/'));
     if (!imageFiles.length) return;
 
@@ -1210,6 +1328,11 @@ function renderReceiptUploadPreview() {
 }
 
 function appendReceiptUploadFiles(files) {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return;
+    }
+
     const imageFiles = Array.from(files || []).filter(file => file.type.startsWith('image/'));
     if (!imageFiles.length) return;
 
@@ -1232,6 +1355,11 @@ function appendReceiptUploadFiles(files) {
 }
 
 function removeReceiptUploadFileAt(index) {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return;
+    }
+
     if (!(index >= 0) || index >= selectedReceiptUploadFiles.length) return;
     selectedReceiptUploadFiles.splice(index, 1);
     renderReceiptUploadPreview();
@@ -1249,6 +1377,11 @@ async function getReceiptUploadPayloads() {
 }
 
 function openReceiptUploadModal(expenseId) {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return;
+    }
+
     const expense = getExpenseById(expenseId);
     const modal = $('#receipt-upload-modal');
     if (!expense || !modal) return;
@@ -1274,6 +1407,11 @@ function closeReceiptUploadModal() {
 }
 
 async function submitReceiptUpload() {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return;
+    }
+
     if (!activeReceiptUploadExpenseId || !selectedReceiptUploadFiles.length) return;
 
     const expenseId = activeReceiptUploadExpenseId;
@@ -1287,6 +1425,11 @@ async function submitReceiptUpload() {
 }
 
 function removeReceiptFileAt(index) {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return;
+    }
+
     if (!(index >= 0) || index >= selectedReceiptFiles.length) return;
     selectedReceiptFiles.splice(index, 1);
     renderReceiptPreview();
@@ -1331,6 +1474,47 @@ function safeSetHtml(selector, value) {
     if (node) node.innerHTML = value;
 }
 
+function applyPreviewModeUi() {
+    if (!isPreviewMode) return;
+
+    document.body.classList.add('preview-mode');
+    document.body.dataset.previewMode = 'true';
+
+    if (!$('#preview-mode-banner')) {
+        const banner = document.createElement('div');
+        banner.id = 'preview-mode-banner';
+        banner.className = 'preview-mode-banner';
+        banner.setAttribute('role', 'status');
+        banner.innerHTML = '<strong>唯讀預覽模式</strong><span>此分享連結只能查看支出紀錄與收支總覽，無法新增、編輯、上傳或管理資料。</span>';
+        const container = document.querySelector('main .container');
+        if (container) container.insertAdjacentElement('afterbegin', banner);
+    }
+
+    document.querySelectorAll('[data-dashboard-tab="quick"]').forEach(button => {
+        button.hidden = true;
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+    });
+
+    document.querySelectorAll('a[href*="settings.html"], a[href="#expense-form"], #open-import-text-btn').forEach(node => {
+        node.hidden = true;
+        node.setAttribute('aria-hidden', 'true');
+    });
+
+    ['#trip-switch-form', '#expense-create-form', '#trip-create-form', '#member-form', '#category-form', '#payment-form', '#expense-edit-form', '#receipt-upload-modal'].forEach(selector => {
+        const root = $(selector);
+        if (!root) return;
+        root.querySelectorAll('input, select, textarea, button').forEach(control => {
+            control.disabled = true;
+            control.setAttribute('aria-disabled', 'true');
+        });
+        root.querySelectorAll('.icon-select-trigger, .icon-select-option').forEach(control => {
+            control.disabled = true;
+            control.setAttribute('aria-disabled', 'true');
+        });
+    });
+}
+
 function renderAll() {
     renderTripSelect();
     renderArchivedTrips();
@@ -1345,6 +1529,7 @@ function renderAll() {
     if (typeof renderExpenseChart === 'function') renderExpenseChart();
     if (typeof renderBudgetChart === 'function') renderBudgetChart();
     if ($('#expense-currency') && $('#amount-original')) updateExchangePreview();
+    applyPreviewModeUi();
 }
 
 function isCurrentTripArchived() {
@@ -1354,19 +1539,20 @@ function isCurrentTripArchived() {
 
 function updateFormDisabledState() {
     const isArchived = isCurrentTripArchived();
-    const forms = ['#member-form', '#category-form', '#payment-form', '#expense-create-form'];
+    const isReadonly = isPreviewMode || isArchived;
+    const forms = ['#member-form', '#category-form', '#payment-form', '#expense-create-form', '#trip-create-form'];
 
     forms.forEach(formSelector => {
         const form = $(formSelector);
         if (!form) return;
         const inputs = form.querySelectorAll('input, select, textarea, button[type="submit"]');
-        inputs.forEach(input => { input.disabled = isArchived; });
+        inputs.forEach(input => { input.disabled = isReadonly; });
     });
 
     const archiveBtn = $('#archive-trip-btn');
     if (archiveBtn) {
-        archiveBtn.disabled = isArchived;
-        archiveBtn.title = isArchived ? '此旅遊已封存' : '封存目前旅遊';
+        archiveBtn.disabled = isReadonly;
+        archiveBtn.title = isPreviewMode ? '唯讀預覽模式不能封存帳本' : (isArchived ? '此旅遊已封存' : '封存目前旅遊');
     }
 
     if (isArchived) setStatus('已封存的旅遊不能修改。若要編輯，請先解除封存。', 'info');
@@ -1385,11 +1571,15 @@ function renderTripSelect() {
         return trips.indexOf(a) - trips.indexOf(b);
     });
 
+    if (isPreviewMode && currentTripId && !sortedTrips.some(trip => trip.id === currentTripId)) {
+        sortedTrips.unshift(currentTrip());
+    }
+
     select.innerHTML = sortedTrips.map(trip => `<option value="${trip.id}" ${trip.id === currentTripId ? 'selected' : ''}>${trip.name}</option>`).join('');
     syncIconSelect(select);
 }
 
-function renderArchivedTrips() {
+function renderArchivedTripsLegacy() {
     const container = $('#archived-trips-list');
     if (!container) return;
 
@@ -1407,6 +1597,34 @@ function renderArchivedTrips() {
       <button class="icon-btn" type="button" data-unarchive-trip="${trip.id}" title="解除封存">↩</button>
     </div>
   `).join('');
+}
+
+function renderArchivedTrips() {
+    const container = $('#archived-trips-list');
+    if (!container) return;
+
+    if (!archivedTrips || !archivedTrips.length) {
+        container.innerHTML = '<p class="field-hint">目前沒有已封存旅遊。</p>';
+        return;
+    }
+
+    container.innerHTML = archivedTrips.map(trip => {
+        const tripId = escapeHtml(trip.id);
+        const tripName = escapeHtml(trip.name);
+        const unarchiveButton = isPreviewMode ? '' : `<button class="icon-btn" type="button" data-unarchive-trip="${tripId}" title="解除封存">↩</button>`;
+        return `
+    <div class="list-row archived-trip-row">
+      <div class="list-info">
+        <span class="mini-icon">📦</span>
+        <div><strong>${tripName}</strong><small>${tripId}</small></div>
+      </div>
+      <div class="archived-trip-actions">
+        <button class="btn btn-soft archived-preview-copy" type="button" data-copy-preview-link="${tripId}">🔗 複製連結</button>
+        ${unarchiveButton}
+      </div>
+    </div>
+  `;
+    }).join('');
 }
 
 function renderTripHeaders() {
@@ -2321,6 +2539,11 @@ function validateEditSplitInputs(splitType, totalAmount) {
 }
 
 function openExpenseEditModal(expenseId) {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return;
+    }
+
     const expense = getExpenseById(expenseId);
     const modal = $('#expense-edit-modal');
     if (!expense || !modal) return;
@@ -2394,6 +2617,11 @@ function buildEditExpensePayload() {
 }
 
 async function confirmAndDeleteExpense(expenseId, onConfirmed) {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return false;
+    }
+
     const expense = getExpenseById(expenseId);
     if (!expense) return false;
     if (!confirm(`確定要軟刪除「${expense.title || '這筆支出'}」嗎？\n\n刪除後不會出現在支出紀錄、總額與圖表中。`)) return false;
@@ -2408,12 +2636,22 @@ function bindTripSwitch() {
     if (!form || !select) return;
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
+        if (isPreviewMode) {
+            select.value = currentTripId;
+            setStatus('唯讀預覽模式不能切換帳本。', 'error');
+            return;
+        }
         currentTripId = select.value;
         localStorage.setItem('tripsplit_current_trip_id', currentTripId);
         localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'manual');
         await loadCurrentTripData();
     });
     select.addEventListener('change', async () => {
+        if (isPreviewMode) {
+            select.value = currentTripId;
+            setStatus('唯讀預覽模式不能切換帳本。', 'error');
+            return;
+        }
         currentTripId = select.value;
         localStorage.setItem('tripsplit_current_trip_id', currentTripId);
         localStorage.setItem(TRIP_SELECTION_MODE_KEY, 'manual');
@@ -2426,6 +2664,7 @@ function bindSettingsForms() {
     if (tripCreateForm) {
         tripCreateForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            if (guardReadonlyAction(event)) return;
             const input = $('#new-trip-name');
             const name = input.value.trim();
             if (!name) return;
@@ -2451,6 +2690,7 @@ function bindSettingsForms() {
     if (memberForm) {
         memberForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            if (guardReadonlyAction(event)) return;
             const input = $('#member-name');
             const name = input.value.trim();
             if (!name) return;
@@ -2463,6 +2703,7 @@ function bindSettingsForms() {
     if (categoryForm) {
         categoryForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            if (guardReadonlyAction(event)) return;
             const name = $('#new-category-name').value.trim();
             const icon = $('#new-category-icon').value.trim() || '🏷';
             if (!name) return;
@@ -2476,6 +2717,7 @@ function bindSettingsForms() {
     if (paymentForm) {
         paymentForm.addEventListener('submit', async (event) => {
             event.preventDefault();
+            if (guardReadonlyAction(event)) return;
             const name = $('#new-payment-name').value.trim();
             const icon = $('#new-payment-icon').value.trim() || '💳';
             if (!name) return;
@@ -2511,6 +2753,31 @@ function bindGlobalClicks() {
         }
 
         if (!event.target.closest('.icon-select')) closeIconSelects();
+
+        const copyPreviewLinkButton = event.target.closest('[data-copy-preview-link]');
+        if (copyPreviewLinkButton) {
+            const tripId = copyPreviewLinkButton.dataset.copyPreviewLink || '';
+            const originalText = copyPreviewLinkButton.textContent;
+            try {
+                await copyTextToClipboard(buildArchivedTripPreviewUrl(tripId));
+                setStatus('已複製預覽連結。', 'success');
+                copyPreviewLinkButton.textContent = '已複製';
+                window.setTimeout(() => {
+                    copyPreviewLinkButton.textContent = originalText || '🔗 複製連結';
+                }, 1600);
+            } catch (error) {
+                console.warn(error);
+                setStatus('無法複製連結，請稍後再試。', 'error');
+            }
+            return;
+        }
+
+        const previewMutationTarget = event.target.closest(PREVIEW_MUTATION_SELECTOR);
+        if (previewMutationTarget && guardReadonlyAction(event)) {
+            openExpenseMenuId = '';
+            renderExpenses();
+            return;
+        }
 
         const expenseViewModeButton = event.target.closest('[data-expense-view-mode]');
         if (expenseViewModeButton) {
@@ -2684,6 +2951,7 @@ function getDashboardTabFromHash(hash = window.location.hash) {
     const normalizedHash = String(hash || '').toLowerCase();
     if (normalizedHash === '#expenses') return 'records';
     if (['#balances', '#settlements', '#expense-charts'].includes(normalizedHash)) return 'overview';
+    if (isPreviewMode) return 'records';
     return 'quick';
 }
 
@@ -2701,10 +2969,11 @@ function setDashboardTab(tab, options = {}) {
     const sideStack = $('.side-stack');
     if (!layout || !contentStack || !expenseForm || !expensesPanel || !sideStack) return;
 
-    const activeTab = ['quick', 'records', 'overview'].includes(tab) ? tab : 'quick';
+    const allowedTabs = isPreviewMode ? ['records', 'overview'] : ['quick', 'records', 'overview'];
+    const activeTab = allowedTabs.includes(tab) ? tab : (isPreviewMode ? 'records' : 'quick');
     layout.dataset.activeTab = activeTab;
     contentStack.hidden = activeTab === 'overview';
-    expenseForm.hidden = activeTab !== 'quick';
+    expenseForm.hidden = isPreviewMode || activeTab !== 'quick';
     expensesPanel.hidden = activeTab !== 'records';
     sideStack.hidden = activeTab !== 'overview';
 
@@ -2712,6 +2981,11 @@ function setDashboardTab(tab, options = {}) {
         const isActive = button.dataset.dashboardTab === activeTab;
         button.classList.toggle('active', isActive);
         button.setAttribute('aria-selected', String(isActive));
+        if (isPreviewMode && button.dataset.dashboardTab === 'quick') {
+            button.hidden = true;
+            button.disabled = true;
+            button.setAttribute('aria-disabled', 'true');
+        }
     });
 
     if (options.updateHash) {
@@ -2799,17 +3073,28 @@ function bindExpenseForm() {
     });
     ['#receipt-files', '#receipt-camera-files'].forEach(selector => {
         $(selector)?.addEventListener('change', (event) => {
+            if (isPreviewMode) {
+                event.target.value = '';
+                guardReadonlyAction(event);
+                return;
+            }
             appendReceiptFiles(event.target.files || []);
             event.target.value = '';
         });
     });
     ['#receipt-upload-files', '#receipt-upload-camera-files'].forEach(selector => {
         $(selector)?.addEventListener('change', (event) => {
+            if (isPreviewMode) {
+                event.target.value = '';
+                guardReadonlyAction(event);
+                return;
+            }
             appendReceiptUploadFiles(event.target.files || []);
             event.target.value = '';
         });
     });
-    $('#receipt-upload-submit')?.addEventListener('click', async () => {
+    $('#receipt-upload-submit')?.addEventListener('click', async (event) => {
+        if (guardReadonlyAction(event)) return;
         await submitReceiptUpload();
     });
 
@@ -2887,12 +3172,14 @@ function bindExpenseForm() {
     });
     $('#expense-edit-form')?.addEventListener('submit', async (event) => {
         event.preventDefault();
+        if (guardReadonlyAction(event)) return;
         const payload = buildEditExpensePayload();
         if (!payload) return;
         closeExpenseEditModal();
         await saveThenReload('updateExpense', payload, 900);
     });
-    $('#expense-soft-delete-btn')?.addEventListener('click', async () => {
+    $('#expense-soft-delete-btn')?.addEventListener('click', async (event) => {
+        if (guardReadonlyAction(event)) return;
         if (!activeEditingExpenseId) return;
         await confirmAndDeleteExpense(activeEditingExpenseId, closeExpenseEditModal);
     });
@@ -2913,6 +3200,7 @@ function bindExpenseForm() {
     });
     expenseForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+        if (guardReadonlyAction(event)) return;
         const selectedCategory = categories.find(item => String(item.id) === $('#category-id').value);
         const selectedPayment = paymentMethods.find(item => String(item.id) === $('#payment-method-id').value);
         const amount = Number($('#amount-original').value || 0);
@@ -2965,6 +3253,11 @@ let importTextItems = []; // 保持 modal 內資料
 let activeImportTextIndex = 0;
 
 function openImportTextModal() {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return;
+    }
+
     const modal = $('#import-text-modal');
     if (!modal) return;
     modal.classList.add('show');
@@ -3101,6 +3394,11 @@ function setActiveImportTextIndex(index) {
 }
 
 function importTextItemToForm(index, options = {}) {
+    if (isPreviewMode) {
+        guardReadonlyAction();
+        return false;
+    }
+
     const item = importTextItems[index];
     if (!item) return false;
 
@@ -3171,7 +3469,10 @@ function bindImportTextModal() {
     ensureImportTextControls();
     updateImportTextCountBadge();
 
-    $('#open-import-text-btn')?.addEventListener('click', openImportTextModal);
+    $('#open-import-text-btn')?.addEventListener('click', (event) => {
+        if (guardReadonlyAction(event)) return;
+        openImportTextModal();
+    });
 
     $('#copy-ai-prompt-btn')?.addEventListener('click', () => {
         const text = $('#ai-prompt-text')?.textContent || '';
@@ -3181,7 +3482,8 @@ function bindImportTextModal() {
         });
     });
 
-    $('#parse-import-text-btn')?.addEventListener('click', () => {
+    $('#parse-import-text-btn')?.addEventListener('click', (event) => {
+        if (guardReadonlyAction(event)) return;
         const raw = $('#import-text-textarea')?.value || '';
         importTextItems = parseImportText(raw);
         activeImportTextIndex = 0;
@@ -3191,7 +3493,8 @@ function bindImportTextModal() {
         renderImportTextResult();
     });
 
-    $('#clear-import-text-btn')?.addEventListener('click', () => {
+    $('#clear-import-text-btn')?.addEventListener('click', (event) => {
+        if (guardReadonlyAction(event)) return;
         const ta = $('#import-text-textarea');
         if (ta) ta.value = '';
         importTextItems = [];
@@ -3207,19 +3510,24 @@ function bindImportTextModal() {
         setActiveImportTextIndex(activeImportTextIndex + 1);
     });
 
-    $('#import-text-current-btn')?.addEventListener('click', () => {
+    $('#import-text-current-btn')?.addEventListener('click', (event) => {
+        if (guardReadonlyAction(event)) return;
         importTextItemToForm(activeImportTextIndex);
     });
 
-    $('#import-text-form-prev-btn')?.addEventListener('click', () => {
+    $('#import-text-form-prev-btn')?.addEventListener('click', (event) => {
+        if (guardReadonlyAction(event)) return;
         stepImportTextItemOnForm(-1);
     });
 
-    $('#import-text-form-next-btn')?.addEventListener('click', () => {
+    $('#import-text-form-next-btn')?.addEventListener('click', (event) => {
+        if (guardReadonlyAction(event)) return;
         stepImportTextItemOnForm(1);
     });
 
     $('#import-text-result-list')?.addEventListener('click', (event) => {
+        if (event.target.closest('[data-import-item], [data-remove-import-item]') && guardReadonlyAction(event)) return;
+
         const importBtn = event.target.closest('[data-import-item]');
         if (importBtn) {
             const idx = Number(importBtn.dataset.importItem);
