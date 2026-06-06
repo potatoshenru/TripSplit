@@ -3308,6 +3308,19 @@ function getSelectedImportTextIndexes() {
         .sort((a, b) => a - b);
 }
 
+function getImportTextItemQuantity(item) {
+    const match = String(item?.title || '').match(/[*＊]\s*(\d+(?:\.\d+)?)\s*$/);
+    if (!match) return 1;
+
+    const quantity = Number(match[1]);
+    return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+}
+
+function formatImportTextQuantity(quantity) {
+    const rounded = Math.round(Number(quantity || 0) * 100) / 100;
+    return Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(/\.?0+$/, '');
+}
+
 function removeImportTextItem(index) {
     importTextItems.splice(index, 1);
     selectedImportTextIndexes = new Set(
@@ -3466,13 +3479,14 @@ function importSelectedTextItemsToForm(options = {}) {
 
     const selectedItems = selectedIndexes.map(index => importTextItems[index]).filter(Boolean);
     const totalAmount = selectedItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const totalQuantity = selectedItems.reduce((sum, item) => sum + getImportTextItemQuantity(item), 0);
     const firstItem = selectedItems[0];
     const titleInput = $('#expense-title');
     const dateInput = $('#expense-date');
     const amountInput = $('#amount-original');
     const noteInput = $('#note');
 
-    if (titleInput) titleInput.value = '';
+    if (titleInput) titleInput.value = `*${formatImportTextQuantity(totalQuantity)}(請參閱備註)`;
     if (dateInput && firstItem?.date) {
         setRocDateValue(dateInput, getImportTextIsoDate(firstItem.date) || firstItem.date);
     }
