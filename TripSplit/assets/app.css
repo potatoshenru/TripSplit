@@ -2766,6 +2766,8 @@ a:focus-visible,
     border: 1px solid var(--line);
     border-radius: 10px;
     padding: 12px 14px;
+    margin: 0;
+    overflow-x: auto;
     white-space: pre-wrap;
     word-break: break-all;
     line-height: 1.7;
@@ -2857,6 +2859,7 @@ a:focus-visible,
     }
 
     .import-text-nav-btn:disabled,
+    .import-text-merge-btn:disabled,
     .import-text-current-btn:disabled {
         opacity: .48;
         cursor: not-allowed;
@@ -2871,6 +2874,7 @@ a:focus-visible,
     text-align: center;
 }
 
+.import-text-merge-btn,
 .import-text-current-btn {
     min-height: 38px;
     padding: 7px 13px;
@@ -2893,12 +2897,27 @@ a:focus-visible,
     border-radius: var(--radius-md);
     background: var(--surface);
     padding: 10px 14px;
+    cursor: pointer;
 }
 
     .import-text-result-row.active {
         border-color: var(--primary);
         background: var(--primary-soft);
         box-shadow: 0 0 0 3px rgba(181, 111, 24, .1);
+    }
+
+.import-text-result-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+    .import-text-result-check input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--primary);
+        cursor: pointer;
     }
 
 .import-text-result-info {
