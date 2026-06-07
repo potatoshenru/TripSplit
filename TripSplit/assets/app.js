@@ -705,9 +705,81 @@ function buildReceiptLinks(expense) {
     return `<div class="expense-links">${viewButtons}</div>`;
 }
 
+function parseMergedNoteLines(note) {
+    const text = String(note || '').trim();
+    if (!text) return [];
+
+    const lines = text.split(/\r?\n/);
+    return lines.map(line => {
+        const match = line.trim().match(/^(\d{4}-\d{2}-\d{2})\|([^|]+)\|(\d+)$/);
+        if (!match) return null;
+        const item = match[2].trim();
+        if (!item) return null;
+        return {
+            date: match[1],
+            item,
+            amount: Number(match[3])
+        };
+    });
+}
+
+function isMergedDetailNote(note) {
+    const details = parseMergedNoteLines(note);
+    return details.length > 0 && details.every(Boolean);
+}
+
+function formatAmount(amount) {
+    return money.format(Number(amount || 0));
+}
+
+function getMergedNoteKey(expense, note) {
+    const expenseId = String(expense?.id || '').trim();
+    if (expenseId) return expenseId;
+
+    const source = `${expense?.date || ''}|${expense?.title || ''}|${note}`;
+    let hash = 0;
+    for (let index = 0; index < source.length; index += 1) {
+        hash = ((hash << 5) - hash + source.charCodeAt(index)) | 0;
+    }
+    return `note_${Math.abs(hash)}`;
+}
+
 function buildExpenseNote(expense) {
     const note = String(expense?.note || '').trim();
     if (!note) return '';
+
+    if (isMergedDetailNote(note)) {
+        const details = parseMergedNoteLines(note);
+        const total = details.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        const currency = expense?.currency || 'TWD';
+        const noteKey = getMergedNoteKey(expense, note);
+        const isExpanded = expandedMergedNoteIds.has(noteKey);
+        const rows = details.map(item => `
+          <div class="merged-note-row">
+            <span class="merged-note-date">${escapeHtml(item.date)}</span>
+            <span class="merged-note-item" title="${escapeHtml(item.item)}">${escapeHtml(item.item)}</span>
+            <span class="merged-note-amount">${formatAmount(item.amount)}</span>
+          </div>`).join('');
+
+        return `
+        <div class="expense-note expense-note-merged">
+          <div class="merged-note-summary">
+            <strong>🧾 合併明細 ${details.length} 筆</strong>
+            <span>${escapeHtml(currency)} ${formatAmount(total)}</span>
+          </div>
+          <button class="merged-note-toggle" type="button" data-toggle-merged-note="${escapeHtml(noteKey)}" aria-expanded="${isExpanded}">${isExpanded ? '收合明細' : '查看明細'}</button>
+          ${isExpanded ? `
+          <div class="merged-note-table" role="table" aria-label="合併明細備註">
+            <div class="merged-note-head" role="row">
+              <span role="columnheader">日期</span>
+              <span role="columnheader">品項</span>
+              <span role="columnheader">金額</span>
+            </div>
+            <div class="merged-note-body">${rows}</div>
+            <div class="merged-note-total">合計 ${escapeHtml(currency)} ${formatAmount(total)}</div>
+          </div>` : ''}
+        </div>`;
+    }
 
     return `
         <details class="expense-note">
@@ -1462,6 +1534,7 @@ let expenseViewMode = 'card';
 let expenseTablePage = 1;
 let selectedExpenseTableDetailId = '';
 let expandedExpenseIds = new Set();
+let expandedMergedNoteIds = new Set();
 let openExpenseMenuId = '';
 let pendingExpenseResetCurrency = '';
 let activeEditingExpenseId = '';
@@ -2809,6 +2882,15 @@ function bindGlobalClicks() {
         if (expenseMenuButton) {
             const menuId = expenseMenuButton.dataset.expenseMenu || '';
             openExpenseMenuId = openExpenseMenuId === menuId ? '' : menuId;
+            renderExpenses();
+            return;
+        }
+
+        const mergedNoteToggle = event.target.closest('[data-toggle-merged-note]');
+        if (mergedNoteToggle) {
+            const noteKey = mergedNoteToggle.dataset.toggleMergedNote || '';
+            if (expandedMergedNoteIds.has(noteKey)) expandedMergedNoteIds.delete(noteKey);
+            else expandedMergedNoteIds.add(noteKey);
             renderExpenses();
             return;
         }
