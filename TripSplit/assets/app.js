@@ -780,13 +780,18 @@ function buildExpenseNote(expense) {
             <span class="merged-note-amount">${formatAmount(item.amount)}</span>
           </div>`).join('');
 
+        const toggleText = isExpanded ? '收合明細 ▴' : '查看明細 ▾';
+
         return `
-        <div class="expense-note expense-note-merged">
-          <div class="merged-note-summary">
-            <strong>🧾 合併明細 ${details.length} 筆</strong>
-            <span>${escapeHtml(currency)} ${formatAmount(total)}</span>
+        <div class="expense-note expense-note-merged${isExpanded ? ' merged-note-summary-expanded' : ''}">
+          <div class="merged-note-summary" data-toggle-merged-note="${escapeHtml(noteKey)}" aria-expanded="${isExpanded}" role="button" tabindex="0">
+            <div class="merged-note-summary-main">
+              <strong>🧾 合併明細 ${details.length} 筆</strong>
+              <span aria-hidden="true">｜</span>
+              <span>${escapeHtml(currency)} ${formatAmount(total)}</span>
+            </div>
+            <button class="merged-note-toggle" type="button" data-toggle-merged-note="${escapeHtml(noteKey)}" aria-expanded="${isExpanded}">${toggleText}</button>
           </div>
-          <button class="merged-note-toggle" type="button" data-toggle-merged-note="${escapeHtml(noteKey)}" aria-expanded="${isExpanded}">${isExpanded ? '收合明細' : '查看明細'}</button>
           ${isExpanded ? `
           <div class="merged-note-table" role="table" aria-label="合併明細備註">
             <div class="merged-note-head" role="row">
@@ -2005,23 +2010,23 @@ function buildExpenseDetail(expense) {
         const share = Number(item.share_amount_twd || 0);
         const amountText = share ? `NT$ ${money.format(Math.round(share))}` : '金額未設定';
         return `
-            <div class="expense-detail-row">
+            <div class="expense-detail-row settlement-row">
               <span>${escapeHtml(item.member_name || '未命名')}</span>
-              <strong>${escapeHtml(amountText)}</strong>
+              <strong class="settlement-amount">${escapeHtml(amountText)}</strong>
             </div>`;
     }).join('');
 
     return `
-        <div class="expense-detail-panel">
-          <div class="expense-detail-section">
-            <div class="expense-detail-label">付款人</div>
-            <div class="expense-detail-row expense-detail-paid">
+        <div class="expense-detail-panel settlement-summary">
+          <div class="expense-detail-section settlement-section">
+            <div class="expense-detail-label settlement-label">付款</div>
+            <div class="expense-detail-row settlement-row expense-detail-paid">
               <span>${escapeHtml(expense.payer || '未設定')}</span>
-              <strong>已付 ${paidAmount}</strong>
+              <strong class="settlement-amount">已付 ${paidAmount}</strong>
             </div>
           </div>
-          <div class="expense-detail-section">
-            <div class="expense-detail-label">參與者</div>
+          <div class="expense-detail-section settlement-section">
+            <div class="expense-detail-label settlement-label">分帳</div>
             ${participantRows || '<p class="expense-detail-empty">目前沒有分帳明細</p>'}
           </div>
         </div>`;
@@ -2389,8 +2394,6 @@ function buildExpenseCardView(visibleExpenses) {
             <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
             ${buildExpenseSummary(expense)}
             ${buildReceiptLinks(expense)}
-            ${buildExpenseNote(expense)}
-            <button class="expense-detail-toggle" type="button" data-toggle-expense-detail="${escapeHtml(expenseId)}" aria-expanded="${isExpanded}" aria-label="${isExpanded ? '收合' : '展開'} ${escapeHtml(expense.title || '支出')} 明細">明細 <span aria-hidden="true">${isExpanded ? '▲' : '▼'}</span></button>
           </div>
           <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
           <div class="expense-actions">
@@ -2401,6 +2404,8 @@ function buildExpenseCardView(visibleExpenses) {
               <button class="danger" type="button" data-delete-expense="${escapeHtml(expenseId)}">刪除</button>
             </div>
           </div>
+          ${buildExpenseNote(expense)}
+          <button class="expense-detail-toggle" type="button" data-toggle-expense-detail="${escapeHtml(expenseId)}" aria-expanded="${isExpanded}" aria-label="${isExpanded ? '收合' : '展開'} ${escapeHtml(expense.title || '支出')} 明細">明細 <span aria-hidden="true">${isExpanded ? '▲' : '▼'}</span></button>
           ${isExpanded ? buildExpenseDetail(expense) : ''}
         </article>
         `;
@@ -2442,13 +2447,13 @@ function renderExpensesLegacy() {
             <strong>${escapeHtml(expense.title || '未命名支出')}</strong>
             <span>付款人 ${escapeHtml(expense.payer || '未設定')} · ${escapeHtml(expense.category || '未分類')} · ${escapeHtml(expense.payment || '未設定付款方式')} · ${escapeHtml(expense.currency || 'TWD')} ${money.format(Number(expense.amount || 0))} · 匯率 ${money.format(Number(expense.rate || 1))} · ${escapeHtml(expense.split || '')}</span>
             ${buildReceiptLinks(expense)}
-            ${buildExpenseNote(expense)}
           </div>
           <div class="expense-amount"><strong>NT$ ${money.format(Math.round(expense.twd || 0))}</strong></div>
           <div class="expense-actions">
             <button class="expense-edit-badge" type="button" data-edit-expense="${escapeHtml(expense.id)}" aria-label="編輯 ${escapeHtml(expense.title || '支出')}">編輯</button>
             <button class="expense-delete-badge" type="button" data-delete-expense="${escapeHtml(expense.id)}" aria-label="刪除 ${escapeHtml(expense.title || '支出')}">🗑</button>
           </div>
+          ${buildExpenseNote(expense)}
         </article>
         `).join('')}
       </div>
@@ -3929,6 +3934,16 @@ function isTextEntryTarget(target) {
 
 function bindKeyboard() {
     document.addEventListener('keydown', (event) => {
+        const mergedNoteKeyboardToggle = event.target.closest?.('[data-toggle-merged-note]');
+        if (mergedNoteKeyboardToggle && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            const noteKey = mergedNoteKeyboardToggle.dataset.toggleMergedNote || '';
+            if (expandedMergedNoteIds.has(noteKey)) expandedMergedNoteIds.delete(noteKey);
+            else expandedMergedNoteIds.add(noteKey);
+            renderExpenses();
+            return;
+        }
+
         const hasOpenModal = $('#expense-edit-modal')?.classList.contains('show') ||
             $('#import-text-modal')?.classList.contains('show') ||
             $('#receipt-upload-modal')?.classList.contains('show') ||
