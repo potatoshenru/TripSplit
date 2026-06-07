@@ -127,6 +127,25 @@ function formatTwd(value) {
     return `NT$ ${money.format(Math.round(Math.abs(Number(value || 0))))}`;
 }
 
+function getResultAmount(item) {
+    const amount = Number(item?.amount || 0);
+    return Number.isFinite(amount) ? amount : 0;
+}
+
+function formatCurrencyAmount(amount, currency) {
+    const normalizedCurrency = String(currency || 'TWD').toUpperCase();
+    const rounded = Math.round(Number(amount || 0));
+    if (normalizedCurrency === 'TWD') return `NT$${money.format(rounded)}`;
+    return `${normalizedCurrency} ${money.format(rounded)}`;
+}
+
+function convertToTwd(amount, exchangeRate) {
+    const value = Number(amount || 0);
+    const rate = Number(exchangeRate || 0);
+    if (!Number.isFinite(value) || !Number.isFinite(rate) || rate <= 0) return 0;
+    return Math.round(value * rate);
+}
+
 function getStoredTripModifiedTimes() {
     try {
         return JSON.parse(localStorage.getItem('tripsplit_trip_modified_at') || '{}') || {};
@@ -3141,13 +3160,17 @@ function bindExpenseForm() {
     if (amountInput) {
         amountInput.addEventListener('input', () => {
             updateExchangePreview();
+            updateImportTextSummary();
             const splitType = document.querySelector('input[name="split_type"]:checked')?.value || '平均分';
             if (splitType === '自訂金額') renderSplitConfig();
             else updateSplitSummary();
         });
     }
 
-    $('#expense-currency')?.addEventListener('change', updateExchangePreview);
+    $('#expense-currency')?.addEventListener('change', () => {
+        updateExchangePreview();
+        renderImportTextResult();
+    });
     $('#participant-options')?.addEventListener('change', (event) => {
         if (event.target.matches('input[type="checkbox"]')) renderSplitConfig();
     });
@@ -3338,6 +3361,93 @@ let importTextItems = []; // 保持 modal 內資料
 let activeImportTextIndex = 0;
 /** @type {Set<number>} */
 let selectedImportTextIndexes = new Set();
+/** @type {Set<string>} */
+let importedImportTextIds = new Set();
+
+function hashImportTextValue(value) {
+    let hash = 0;
+    const text = String(value || '');
+    for (let index = 0; index < text.length; index += 1) {
+        hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+    }
+    return Math.abs(hash).toString(36);
+}
+
+function getImportTextResultKey(item, index = 0) {
+    if (!item) return '';
+    if (!item.resultId) {
+        const source = [item.date, item.title, getResultAmount(item), index].join('|');
+        item.resultId = `import_text_${index}_${hashImportTextValue(source)}`;
+    }
+    return item.resultId;
+}
+
+function getImportTextCurrency() {
+    return String($('#expense-currency')?.value || localStorage.getItem('tripsplit_last_currency') || 'TWD').toUpperCase();
+}
+
+function getImportTextExchangeRate(currency = getImportTextCurrency()) {
+    return Number(exchangeRates[String(currency || 'TWD').toUpperCase()] || 0);
+}
+
+function getSelectedImportTextResultIds() {
+    return getSelectedImportTextIndexes()
+        .map(index => getImportTextResultKey(importTextItems[index], index))
+        .filter(Boolean);
+}
+
+function calculateParsedResultsSummary(results, importedResultIds, selectedResultIds) {
+    const importedIds = importedResultIds instanceof Set ? importedResultIds : new Set(importedResultIds || []);
+    const selectedIds = selectedResultIds instanceof Set ? selectedResultIds : new Set(selectedResultIds || []);
+    return (results || []).reduce((summary, item, index) => {
+        const key = getImportTextResultKey(item, index);
+        const amount = getResultAmount(item);
+        const isImported = importedIds.has(key);
+        const isSelected = selectedIds.has(key);
+        summary.totalCount += 1;
+        summary.totalAmount += amount;
+        if (isImported) {
+            summary.importedCount += 1;
+            summary.importedAmount += amount;
+        } else {
+            summary.pendingCount += 1;
+            summary.pendingAmount += amount;
+        }
+        if (isSelected) {
+            summary.selectedCount += 1;
+            summary.selectedAmount += amount;
+        }
+        return summary;
+    }, {
+        totalCount: 0,
+        importedCount: 0,
+        pendingCount: 0,
+        selectedCount: 0,
+        totalAmount: 0,
+        importedAmount: 0,
+        pendingAmount: 0,
+        selectedAmount: 0
+    });
+}
+
+function formatImportTextSummaryAmount(amount, currency, rate) {
+    const base = formatCurrencyAmount(amount, currency);
+    if (String(currency || '').toUpperCase() === 'TWD' || !(Number(rate) > 0)) return base;
+    return `${base}｜約 NT$${money.format(convertToTwd(amount, rate))}`;
+}
+
+function markImportTextIndexesImported(indexes) {
+    indexes.forEach(index => {
+        const key = getImportTextResultKey(importTextItems[index], index);
+        if (key) importedImportTextIds.add(key);
+    });
+}
+
+function resetImportTextState() {
+    activeImportTextIndex = 0;
+    selectedImportTextIndexes = new Set();
+    importedImportTextIds = new Set();
+}
 
 function openImportTextModal() {
     if (isPreviewMode) {
@@ -3404,6 +3514,8 @@ function formatImportTextQuantity(quantity) {
 }
 
 function removeImportTextItem(index) {
+    const removedKey = getImportTextResultKey(importTextItems[index], index);
+    if (removedKey) importedImportTextIds.delete(removedKey);
     importTextItems.splice(index, 1);
     selectedImportTextIndexes = new Set(
         Array.from(selectedImportTextIndexes)
@@ -3476,6 +3588,14 @@ function ensureImportTextControls() {
         if (existingLabel) existingLabel.replaceWith(toolbar);
         else section.insertBefore(toolbar, list);
     }
+
+    if (section && list && !$('#import-text-summary')) {
+        const summary = document.createElement('div');
+        summary.className = 'import-text-summary';
+        summary.id = 'import-text-summary';
+        summary.hidden = true;
+        section.insertBefore(summary, list);
+    }
 }
 
 function updateImportTextCountBadge() {
@@ -3486,6 +3606,47 @@ function updateImportTextCountBadge() {
         badge.hidden = count <= 0;
     });
     updateImportTextFormNav();
+}
+
+function updateImportTextSummary() {
+    const summaryNode = $('#import-text-summary');
+    if (!summaryNode) return;
+    if (!importTextItems.length) {
+        summaryNode.hidden = true;
+        summaryNode.innerHTML = '';
+        return;
+    }
+
+    const currency = getImportTextCurrency();
+    const rate = getImportTextExchangeRate(currency);
+    const selectedResultIds = new Set(getSelectedImportTextResultIds());
+    const summary = calculateParsedResultsSummary(importTextItems, importedImportTextIds, selectedResultIds);
+    const formAmountValue = $('#amount-original')?.value;
+    const hasFormAmount = formAmountValue !== undefined && formAmountValue !== null && String(formAmountValue).trim() !== '';
+    const formAmount = Number(formAmountValue || 0);
+    const diff = Math.round((formAmount - summary.importedAmount) * 100) / 100;
+    const matchText = !hasFormAmount ? '' : Math.abs(diff) < 0.0001
+        ? '<div class="import-text-summary-match ok">✅ 目前表單金額與已帶入合計一致</div>'
+        : `<div class="import-text-summary-match warn">⚠️ 目前表單金額與已帶入合計差 ${escapeHtml(formatCurrencyAmount(Math.abs(diff), currency))}</div>`;
+    const selectedText = summary.selectedCount > 0
+        ? `<div class="import-text-summary-selected">已勾選 ${summary.selectedCount} 筆｜合計 ${escapeHtml(formatCurrencyAmount(summary.selectedAmount, currency))}</div>`
+        : '';
+
+    summaryNode.hidden = false;
+    summaryNode.innerHTML = `
+        <div class="import-text-summary-counts">
+            <span>解析結果 ${summary.totalCount} 筆</span>
+            <span>已帶入 ${summary.importedCount} 筆</span>
+            <span>尚未帶入 ${summary.pendingCount} 筆</span>
+        </div>
+        ${selectedText}
+        <div class="import-text-summary-amounts">
+            <span>已帶入合計：${escapeHtml(formatImportTextSummaryAmount(summary.importedAmount, currency, rate))}</span>
+            <span>尚未帶入：${escapeHtml(formatCurrencyAmount(summary.pendingAmount, currency))}</span>
+            <span>解析總額：${escapeHtml(formatImportTextSummaryAmount(summary.totalAmount, currency, rate))}</span>
+        </div>
+        ${matchText}
+    `;
 }
 
 function updateImportTextFormNav() {
@@ -3541,7 +3702,9 @@ function importTextItemToForm(index, options = {}) {
     }
 
     activeImportTextIndex = index;
+    markImportTextIndexesImported([index]);
     updateImportTextFormNav();
+    renderImportTextResult();
     if (options.closeModal !== false) closeImportTextModal();
     if (options.scroll !== false) setDashboardTab('quick', { updateHash: true, scroll: true });
     return true;
@@ -3585,6 +3748,7 @@ function importSelectedTextItemsToForm(options = {}) {
     }
 
     activeImportTextIndex = selectedIndexes[0];
+    markImportTextIndexesImported(selectedIndexes);
     updateImportTextFormNav();
     renderImportTextResult();
     if (options.closeModal !== false) closeImportTextModal();
@@ -3605,7 +3769,11 @@ function renderImportTextResult() {
     const section = $('#import-text-result-section');
     const list = $('#import-text-result-list');
     if (!section || !list) return;
-    if (!importTextItems.length) { section.style.display = 'none'; return; }
+    if (!importTextItems.length) {
+        updateImportTextSummary();
+        section.style.display = 'none';
+        return;
+    }
     clampActiveImportTextIndex();
     section.style.display = '';
     const status = $('#import-text-nav-status');
@@ -3617,22 +3785,29 @@ function renderImportTextResult() {
     [prevBtn, nextBtn, currentBtn, mergeBtn].forEach(button => {
         if (button) button.disabled = importTextItems.length <= 0;
     });
-    list.innerHTML = importTextItems.map((item, idx) => `
-    <div class="import-text-result-row${idx === activeImportTextIndex ? ' active' : ''}" data-import-idx="${idx}">
+    updateImportTextSummary();
+    const currency = getImportTextCurrency();
+    list.innerHTML = importTextItems.map((item, idx) => {
+        const resultKey = getImportTextResultKey(item, idx);
+        const isImported = importedImportTextIds.has(resultKey);
+        return `
+    <div class="import-text-result-row${idx === activeImportTextIndex ? ' active' : ''}${isImported ? ' imported' : ''}" data-import-idx="${idx}">
       <label class="import-text-result-check" aria-label="選擇解析結果">
         <input type="checkbox" data-import-select="${idx}"${selectedImportTextIndexes.has(idx) ? ' checked' : ''}>
       </label>
       <div class="import-text-result-info">
         <span class="import-text-result-date">${escapeHtml(formatRocDate(parseRocDate(item.date)) || item.date)}</span>
         <span class="import-text-result-title">${escapeHtml(item.title)}</span>
-        <span class="import-text-result-amount">${item.amount.toLocaleString()}</span>
+        ${isImported ? '<span class="import-text-result-imported">已帶入</span>' : ''}
+        <span class="import-text-result-amount">${escapeHtml(formatCurrencyAmount(getResultAmount(item), currency))}</span>
       </div>
       <div class="import-text-result-btns">
         <button class="btn btn-primary" type="button" data-import-item="${idx}" style="font-size:.82rem;padding:5px 14px;">帶入</button>
         <button class="btn btn-ghost" type="button" data-remove-import-item="${idx}" style="font-size:.82rem;padding:5px 10px;">✕</button>
       </div>
     </div>
-  `).join('');
+  `;
+    }).join('');
 }
 
 function escapeHtml(str) {
@@ -3659,9 +3834,11 @@ function bindImportTextModal() {
     $('#parse-import-text-btn')?.addEventListener('click', (event) => {
         if (guardReadonlyAction(event)) return;
         const raw = $('#import-text-textarea')?.value || '';
-        importTextItems = parseImportText(raw);
-        activeImportTextIndex = 0;
-        selectedImportTextIndexes = new Set();
+        importTextItems = parseImportText(raw).map((item, index) => ({
+            ...item,
+            resultId: `import_text_${index}_${hashImportTextValue([item.date, item.title, item.amount, index].join('|'))}`
+        }));
+        resetImportTextState();
         // clear textarea after parsing, per spec: 匯入新的資料要先清除後再進行導入
         const ta = $('#import-text-textarea');
         if (ta) ta.value = '';
@@ -3673,8 +3850,7 @@ function bindImportTextModal() {
         const ta = $('#import-text-textarea');
         if (ta) ta.value = '';
         importTextItems = [];
-        activeImportTextIndex = 0;
-        selectedImportTextIndexes = new Set();
+        resetImportTextState();
         renderImportTextResult();
     });
 
@@ -3714,6 +3890,7 @@ function bindImportTextModal() {
             const idx = Number(selectInput.dataset.importSelect);
             if (selectInput.checked) selectedImportTextIndexes.add(idx);
             else selectedImportTextIndexes.delete(idx);
+            updateImportTextSummary();
             return;
         }
 
