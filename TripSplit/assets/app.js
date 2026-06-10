@@ -127,6 +127,11 @@ function formatTwd(value) {
     return `NT$ ${money.format(Math.round(Math.abs(Number(value || 0))))}`;
 }
 
+function formatSignedTwd(value) {
+    const amount = Math.round(Number(value || 0));
+    return `${amount < 0 ? '-' : ''}NT$ ${money.format(Math.abs(amount))}`;
+}
+
 function getResultAmount(item) {
     const amount = Number(item?.amount || 0);
     return Number.isFinite(amount) ? amount : 0;
@@ -1058,6 +1063,212 @@ function buildDirectSettlementSuggestions() {
     });
 }
 
+const BALANCE_DETAIL_LABELS = {
+    balance: '\u61c9\u4ed8 / \u61c9\u6536\u7e3d\u984d',
+    personal: '\u500b\u4eba\u65c5\u904a\u82b1\u8cbb',
+    selfPaid: '\u81ea\u4ed8\u500b\u4eba\u9805\u76ee',
+    advancedForOthers: '\u4ee3\u588a\u5171\u540c\u652f\u51fa',
+    owedToOthers: '\u61c9\u4ed8\u4ed6\u4eba\u5206\u6524'
+};
+
+function getBalanceRowByName(memberName) {
+    return computeMemberBalances().find(item => item.name === memberName) || null;
+}
+
+function formatBalanceDetailDate(expense) {
+    return formatExpenseTableDate(expense);
+}
+
+function formatExpenseOriginalAmount(expense) {
+    return `${expense.currency || 'TWD'} ${money.format(Number(expense.amount || 0))}`;
+}
+
+function buildShareSummary(shareRows) {
+    return shareRows
+        .filter(row => row.name)
+        .map(row => `${escapeHtml(row.name)} ${formatSignedTwd(row.amount)}`)
+        .join('<br>');
+}
+
+function getBalanceExpenseDetailRows(memberName, category) {
+    const names = members.map(member => member.name);
+    const rows = [];
+
+    expenses.forEach(expense => {
+        const payer = expense.payer || '';
+        const amountTwd = Number(expense.twd || 0);
+        if (!amountTwd || !names.length) return;
+
+        const shareRows = getExpenseShareRows(expense, names, amountTwd);
+        const memberShare = shareRows.find(row => row.name === memberName);
+        const otherShares = shareRows.filter(row => row.name && row.name !== payer);
+        const advancedAmount = payer === memberName
+            ? otherShares.reduce((sum, row) => sum + Number(row.amount || 0), 0)
+            : 0;
+
+        if (category === 'personal' && memberShare) {
+            rows.push({
+                title: expense.title || '\u672a\u547d\u540d\u652f\u51fa',
+                date: formatBalanceDetailDate(expense),
+                payer,
+                original: formatExpenseOriginalAmount(expense),
+                participants: buildShareSummary(shareRows),
+                relation: payer === memberName ? '\u81ea\u5df1\u4ed8\u6b3e' : `\u4ed8\u6b3e\u4eba\uff1a${payer || '\u672a\u8a2d\u5b9a'}`,
+                amount: Math.round(Number(memberShare.amount || 0))
+            });
+            return;
+        }
+
+        if (category === 'selfPaid' && payer === memberName && memberShare) {
+            rows.push({
+                title: expense.title || '\u672a\u547d\u540d\u652f\u51fa',
+                date: formatBalanceDetailDate(expense),
+                payer,
+                original: formatExpenseOriginalAmount(expense),
+                participants: buildShareSummary(shareRows),
+                relation: '\u4ed8\u6b3e\u4eba\u81ea\u5df1\u7684\u5206\u6524',
+                amount: Math.round(Number(memberShare.amount || 0))
+            });
+            return;
+        }
+
+        if (category === 'advancedForOthers' && payer === memberName && advancedAmount) {
+            rows.push({
+                title: expense.title || '\u672a\u547d\u540d\u652f\u51fa',
+                date: formatBalanceDetailDate(expense),
+                payer,
+                original: formatExpenseOriginalAmount(expense),
+                participants: buildShareSummary(shareRows),
+                relation: shareRows
+                    .filter(row => row.name && row.name !== memberName)
+                    .map(row => `${escapeHtml(row.name)} ${formatSignedTwd(row.amount)}`)
+                    .join('<br>'),
+                amount: Math.round(advancedAmount)
+            });
+            return;
+        }
+
+        if (category === 'owedToOthers' && memberShare && payer && payer !== memberName) {
+            rows.push({
+                title: expense.title || '\u672a\u547d\u540d\u652f\u51fa',
+                date: formatBalanceDetailDate(expense),
+                payer,
+                original: formatExpenseOriginalAmount(expense),
+                participants: buildShareSummary(shareRows),
+                relation: `\u6211\u6b20 ${escapeHtml(payer)}`,
+                amount: Math.round(Number(memberShare.amount || 0))
+            });
+        }
+    });
+
+    return rows;
+}
+
+function getBalanceTransferDetailRows(memberName) {
+    const balanceRow = getBalanceRowByName(memberName);
+    const memberBalance = Number(balanceRow?.balance || 0);
+    return buildDirectSettlementSuggestions()
+        .filter(item => item.from === memberName || item.to === memberName)
+        .map(item => {
+            const rawAmount = Math.round(Number(item.amount || 0));
+            const amount = memberBalance >= 0
+                ? (item.to === memberName ? rawAmount : -rawAmount)
+                : (item.from === memberName ? rawAmount : -rawAmount);
+            return {
+                title: `${item.from} \u2192 ${item.to}`,
+                date: '\u7d50\u7b97\u5efa\u8b70',
+                payer: item.from,
+                original: formatTwd(item.amount),
+                participants: `${escapeHtml(item.from)} \u4ed8\u7d66 ${escapeHtml(item.to)}`,
+                relation: item.from === memberName ? `\u6211\u61c9\u4ed8\u7d66 ${escapeHtml(item.to)}` : `${escapeHtml(item.from)} \u61c9\u4ed8\u7d66\u6211\uff08\u62b5\u6263\uff09`,
+                amount
+            };
+        });
+}
+
+function buildBalanceDetailRows(memberName, category) {
+    if (category === 'balance') return getBalanceTransferDetailRows(memberName);
+    return getBalanceExpenseDetailRows(memberName, category);
+}
+
+function buildBalanceDetailTable(rows, category) {
+    if (!rows.length) return '<p class="field-hint">\u9019\u500b\u5206\u985e\u76ee\u524d\u6c92\u6709\u660e\u7d30\u3002</p>';
+
+    const relationHead = category === 'advancedForOthers'
+        ? '\u9019\u7b46\u4ee3\u588a\u7d66\u8ab0'
+        : category === 'owedToOthers'
+            ? '\u6211\u6b20\u8ab0'
+            : category === 'balance'
+                ? '\u7d50\u7b97\u95dc\u4fc2'
+                : '\u95dc\u4fc2';
+
+    return `
+        <div class="balance-detail-table-wrap">
+          <table class="balance-detail-table">
+            <thead>
+              <tr>
+                <th scope="col">\u65e5\u671f</th>
+                <th scope="col">\u54c1\u9805</th>
+                <th scope="col">\u4ed8\u6b3e\u4eba</th>
+                <th scope="col">\u539f\u59cb\u91d1\u984d</th>
+                <th scope="col">\u53c3\u8207\u5206\u6524\u7684\u4eba</th>
+                <th scope="col">${relationHead}</th>
+                <th scope="col" class="numeric">\u7b97\u5165\u91d1\u984d</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(row => `
+                <tr>
+                  <td data-label="\u65e5\u671f">${escapeHtml(row.date)}</td>
+                  <td data-label="\u54c1\u9805">${escapeHtml(row.title)}</td>
+                  <td data-label="\u4ed8\u6b3e\u4eba">${escapeHtml(row.payer || '\u672a\u8a2d\u5b9a')}</td>
+                  <td data-label="\u539f\u59cb\u91d1\u984d">${escapeHtml(row.original)}</td>
+                  <td data-label="\u53c3\u8207\u5206\u6524\u7684\u4eba">${row.participants || '-'}</td>
+                  <td data-label="${relationHead}">${row.relation || '-'}</td>
+                  <td data-label="\u7b97\u5165\u91d1\u984d" class="numeric"><strong>${formatSignedTwd(row.amount)}</strong></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
+}
+
+function openBalanceDetailModal(memberName, category = 'balance') {
+    const modal = $('#balance-detail-modal');
+    const title = $('#balance-detail-title');
+    const summary = $('#balance-detail-summary');
+    const body = $('#balance-detail-body');
+    const balanceRow = getBalanceRowByName(memberName);
+    if (!modal || !title || !summary || !body || !balanceRow) return;
+
+    const label = BALANCE_DETAIL_LABELS[category] || BALANCE_DETAIL_LABELS.balance;
+    const expected = Math.round(Math.abs(Number(balanceRow[category] ?? balanceRow.balance ?? 0)));
+    const rows = buildBalanceDetailRows(memberName, category);
+    const actual = rows.reduce((sum, row) => sum + Math.round(Number(row.amount || 0)), 0);
+    const isMatched = actual === expected;
+
+    title.textContent = `${memberName} - ${label}`;
+    summary.textContent = `${label} ${formatTwd(expected)}，共 ${rows.length} 筆明細。`;
+    body.innerHTML = `
+        <div class="balance-detail-total ${isMatched ? 'matched' : 'mismatch'}">
+          <div><span>\u756b\u9762\u7e3d\u984d</span><strong>${formatTwd(expected)}</strong></div>
+          <div><span>\u660e\u7d30\u52a0\u7e3d</span><strong>${formatSignedTwd(actual)}</strong></div>
+          ${isMatched ? '<p>\u660e\u7d30\u52a0\u7e3d\u8207\u756b\u9762\u7e3d\u984d\u4e00\u81f4\u3002</p>' : '<p>\u26a0 \u660e\u7d30\u52a0\u7e3d\u8207\u756b\u9762\u7e3d\u984d\u4e0d\u4e00\u81f4\uff0c\u8acb\u6aa2\u67e5\u5206\u6524\u660e\u7d30\u3002</p>'}
+        </div>
+        ${buildBalanceDetailTable(rows, category)}
+    `;
+
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeBalanceDetailModal() {
+    const modal = $('#balance-detail-modal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
 function renderBalancesAndSettlements() {
     const balanceRows = computeMemberBalances();
     const balanceGrid = $('#balance-grid');
@@ -1079,17 +1290,18 @@ function renderBalancesAndSettlements() {
     const memberCards = balanceRows.map(item => {
         const status = item.balance > 0 ? '\u61c9\u6536' : item.balance < 0 ? '\u61c9\u4ed8' : '\u5df2\u5e73\u8861';
         const className = item.balance > 0 ? 'positive' : item.balance < 0 ? 'negative' : 'neutral';
-        return `<article class="balance-card balance-person-card ${className}" tabindex="0">
+        const detailButtonAttrs = `data-balance-detail-member="${escapeHtml(item.name)}"`;
+        return `<article class="balance-card balance-person-card ${className}" tabindex="0" ${detailButtonAttrs} data-balance-detail-category="balance" aria-label="${escapeHtml(item.name)} ${status} ${formatTwd(item.balance)}，查看明細">
             <div class="balance-person-head">
                 <span class="balance-person-name">${escapeHtml(item.name)}</span>
                 <span class="balance-status-badge ${className}">${status}</span>
             </div>
-            <strong class="balance-main-amount">${status} ${formatTwd(item.balance)}</strong>
+            <button class="balance-detail-trigger balance-main-amount ${className}" type="button" ${detailButtonAttrs} data-balance-detail-category="balance" aria-label="查看 ${escapeHtml(item.name)} ${status}總額明細">${status} ${formatTwd(item.balance)}</button>
             <div class="balance-breakdown">
-                <small><span>\u500b\u4eba\u65c5\u904a\u82b1\u8cbb</span><strong>${formatTwd(item.personal)}</strong></small>
-                <small><span>\u81ea\u4ed8\u500b\u4eba\u9805\u76ee</span><strong>${formatTwd(item.selfPaid)}</strong></small>
-                <small><span>\u4ee3\u588a\u5171\u540c\u652f\u51fa</span><strong>${formatTwd(item.advancedForOthers)}</strong></small>
-                <small><span>\u61c9\u4ed8\u4ed6\u4eba\u5206\u6524</span><strong>${formatTwd(item.owedToOthers)}</strong></small>
+                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="personal"><span>\u500b\u4eba\u65c5\u904a\u82b1\u8cbb</span><strong>${formatTwd(item.personal)}</strong></button>
+                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="selfPaid"><span>\u81ea\u4ed8\u500b\u4eba\u9805\u76ee</span><strong>${formatTwd(item.selfPaid)}</strong></button>
+                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="advancedForOthers"><span>\u4ee3\u588a\u5171\u540c\u652f\u51fa</span><strong>${formatTwd(item.advancedForOthers)}</strong></button>
+                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="owedToOthers"><span>\u61c9\u4ed8\u4ed6\u4eba\u5206\u6524</span><strong>${formatTwd(item.owedToOthers)}</strong></button>
             </div>
         </article>`;
     }).join('');
@@ -2995,6 +3207,15 @@ function bindGlobalClicks() {
             return;
         }
 
+        const balanceDetailTrigger = event.target.closest('[data-balance-detail-member]');
+        if (balanceDetailTrigger) {
+            openBalanceDetailModal(
+                balanceDetailTrigger.dataset.balanceDetailMember || '',
+                balanceDetailTrigger.dataset.balanceDetailCategory || 'balance'
+            );
+            return;
+        }
+
         const expenseMenuButton = event.target.closest('[data-expense-menu]');
         if (expenseMenuButton) {
             const menuId = expenseMenuButton.dataset.expenseMenu || '';
@@ -3089,6 +3310,12 @@ function bindGlobalClicks() {
         const closeImportTextButton = event.target.closest('[data-close-import-text-modal]');
         if (closeImportTextButton) {
             closeImportTextModal();
+            return;
+        }
+
+        const closeBalanceDetailButton = event.target.closest('[data-close-balance-detail-modal]');
+        if (closeBalanceDetailButton) {
+            closeBalanceDetailModal();
             return;
         }
 
@@ -4039,6 +4266,7 @@ function bindKeyboard() {
 
         const hasOpenModal = $('#expense-edit-modal')?.classList.contains('show') ||
             $('#import-text-modal')?.classList.contains('show') ||
+            $('#balance-detail-modal')?.classList.contains('show') ||
             $('#receipt-upload-modal')?.classList.contains('show') ||
             $('#receipt-modal')?.classList.contains('show') ||
             $('#chart-zoom-modal')?.classList.contains('show');
@@ -4063,6 +4291,16 @@ function bindKeyboard() {
             }
         }
 
+        const balanceDetailKeyboardTrigger = event.target.closest?.('[data-balance-detail-member]');
+        if (!hasOpenModal && balanceDetailKeyboardTrigger && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            openBalanceDetailModal(
+                balanceDetailKeyboardTrigger.dataset.balanceDetailMember || '',
+                balanceDetailKeyboardTrigger.dataset.balanceDetailCategory || 'balance'
+            );
+            return;
+        }
+
         if (event.key !== 'Escape') return;
         if (activeRocDateInput) {
             closeRocDatePicker();
@@ -4078,6 +4316,10 @@ function bindKeyboard() {
         }
         if ($('#import-text-modal')?.classList.contains('show')) {
             closeImportTextModal();
+            return;
+        }
+        if ($('#balance-detail-modal')?.classList.contains('show')) {
+            closeBalanceDetailModal();
             return;
         }
         if ($('#receipt-upload-modal')?.classList.contains('show')) {

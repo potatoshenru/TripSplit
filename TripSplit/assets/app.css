@@ -2476,11 +2476,74 @@ a:focus-visible,
     align-self: center;
 }
 
+.balance-detail-trigger,
+.balance-detail-line {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: 0;
+    cursor: pointer;
+    text-align: left;
+}
+
+.balance-detail-trigger {
+    display: block;
+    margin-top: 0;
+    padding: 0;
+    font-size: clamp(1.08rem, 1.9vw, 1.32rem);
+    font-weight: 950;
+    line-height: 1.25;
+    white-space: nowrap;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+}
+
+.balance-detail-line {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 1px 0;
+    border-radius: 6px;
+}
+
+    .balance-detail-trigger:hover,
+    .balance-detail-trigger:focus-visible,
+    .balance-detail-line:hover,
+    .balance-detail-line:focus-visible {
+        color: var(--primary-dark);
+        outline: 2px solid rgba(168, 107, 42, .24);
+        outline-offset: 2px;
+        text-decoration: underline;
+    }
+
 .balance-breakdown small {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 10px;
+}
+
+.balance-breakdown .balance-detail-line span {
+    display: block;
+    color: var(--muted);
+    font-size: .9rem;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+}
+
+.balance-breakdown .balance-detail-line strong {
+    display: block;
+    margin: 0;
+    color: var(--text);
+    font-size: .95rem;
+    line-height: 1.35;
+    white-space: nowrap;
 }
 
     .balance-breakdown small span,
@@ -2493,6 +2556,131 @@ a:focus-visible,
         margin: 0;
         color: var(--text);
         font-size: .95rem;
+        white-space: nowrap;
+    }
+
+.balance-detail-panel {
+    width: min(calc(100vw - 28px), 1560px);
+    height: min(calc(100vh - 28px), 980px);
+    max-height: calc(100vh - 28px);
+    overflow: hidden;
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+.balance-detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+    .balance-detail-header h2 {
+        margin-top: 2px;
+        font-size: 1.28rem;
+        font-weight: 950;
+        line-height: 1.25;
+    }
+
+    .balance-detail-header p,
+    .balance-detail-kicker {
+        color: var(--muted);
+        font-size: .88rem;
+        font-weight: 850;
+    }
+
+.balance-detail-body {
+    min-height: 0;
+    overflow: auto;
+    display: grid;
+    gap: 12px;
+    padding-right: 2px;
+}
+
+.balance-detail-total {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fffdf8;
+}
+
+    .balance-detail-total div {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .balance-detail-total span {
+        color: var(--muted);
+        font-size: .86rem;
+        font-weight: 850;
+    }
+
+    .balance-detail-total strong {
+        color: var(--primary-dark);
+        font-size: 1.02rem;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .balance-detail-total p {
+        grid-column: 1 / -1;
+        color: var(--green);
+        font-size: .88rem;
+        font-weight: 850;
+    }
+
+    .balance-detail-total.mismatch p {
+        color: var(--red);
+    }
+
+.balance-detail-table-wrap {
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fffdf8;
+}
+
+.balance-detail-table {
+    width: 100%;
+    min-width: 1320px;
+    border-collapse: collapse;
+    font-size: .88rem;
+}
+
+    .balance-detail-table th,
+    .balance-detail-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+    }
+
+    .balance-detail-table th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #fff4df;
+        color: #5d4327;
+        font-size: .8rem;
+        font-weight: 950;
+        white-space: nowrap;
+    }
+
+    .balance-detail-table td {
+        color: var(--text);
+        line-height: 1.45;
+    }
+
+    .balance-detail-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .balance-detail-table .numeric {
+        text-align: right;
         white-space: nowrap;
     }
 
@@ -2760,6 +2948,21 @@ a:focus-visible,
 .receipt-modal-actions {
     display: flex;
     justify-content: flex-end;
+}
+
+#balance-detail-modal .balance-detail-panel {
+    width: min(calc(100vw - 28px), 1560px);
+    height: min(calc(100vh - 28px), 980px);
+    max-height: calc(100vh - 28px);
+    margin: 14px auto;
+    overflow: hidden;
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+#balance-detail-modal .receipt-modal-close {
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 .receipt-upload-panel {
@@ -3612,6 +3815,106 @@ a:focus-visible,
 }
 
 @media (max-width: 700px) {
+    #balance-detail-modal .balance-detail-panel {
+        width: 100vw;
+        height: 100dvh;
+        max-height: 100dvh;
+        margin: 0;
+        border-radius: 0;
+        padding: 12px;
+    }
+
+    .balance-detail-header {
+        gap: 10px;
+    }
+
+        .balance-detail-header h2 {
+            font-size: 1.08rem;
+            line-height: 1.25;
+        }
+
+        .balance-detail-header p {
+            font-size: .8rem;
+            line-height: 1.35;
+        }
+
+    .balance-detail-body {
+        gap: 10px;
+        padding-right: 0;
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .balance-detail-total {
+        grid-template-columns: 1fr;
+        padding: 10px;
+    }
+
+        .balance-detail-total div {
+            gap: 8px;
+        }
+
+    .balance-detail-table-wrap {
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .balance-detail-table {
+        display: block;
+        min-width: 0;
+        width: 100%;
+        font-size: .84rem;
+    }
+
+        .balance-detail-table thead {
+            display: none;
+        }
+
+        .balance-detail-table tbody {
+            display: grid;
+            gap: 10px;
+        }
+
+        .balance-detail-table tr {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 7px;
+            padding: 12px;
+            border: 1px solid rgba(231, 216, 194, .86);
+            border-radius: 14px;
+            background: #fffdf8;
+            box-shadow: 0 8px 18px rgba(65, 42, 20, .045);
+        }
+
+        .balance-detail-table td {
+            display: grid;
+            grid-template-columns: minmax(86px, .42fr) minmax(0, 1fr);
+            gap: 10px;
+            align-items: baseline;
+            padding: 0;
+            border-bottom: 0;
+            overflow-wrap: anywhere;
+        }
+
+            .balance-detail-table td::before {
+                content: attr(data-label);
+                color: var(--muted);
+                font-size: .78rem;
+                font-weight: 950;
+                line-height: 1.35;
+            }
+
+        .balance-detail-table .numeric {
+            text-align: left;
+            white-space: normal;
+        }
+
+            .balance-detail-table .numeric strong {
+                justify-self: start;
+                white-space: nowrap;
+            }
+
     .expense-table-scroll {
         overflow: visible;
         border: 0;
