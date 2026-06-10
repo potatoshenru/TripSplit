@@ -853,7 +853,14 @@ function computeMemberBalances() {
     const nameSet = new Set(names);
     const totals = {};
     names.forEach(name => {
-        totals[name] = { name, paid: 0, owed: 0 };
+        totals[name] = {
+            name,
+            paidTotal: 0,
+            personal: 0,
+            selfPaid: 0,
+            advancedForOthers: 0,
+            owedToOthers: 0
+        };
     });
 
     expenses.forEach(expense => {
@@ -862,26 +869,60 @@ function computeMemberBalances() {
         if (!amountTwd || !names.length) return;
 
         if (payer && !totals[payer]) {
-            totals[payer] = { name: payer, paid: 0, owed: 0 };
+            totals[payer] = {
+                name: payer,
+                paidTotal: 0,
+                personal: 0,
+                selfPaid: 0,
+                advancedForOthers: 0,
+                owedToOthers: 0
+            };
         }
-        if (payer) totals[payer].paid += amountTwd;
+        if (payer) totals[payer].paidTotal += amountTwd;
 
         const shareRows = getExpenseShareRows(expense, names, amountTwd);
+        let payerShare = 0;
+        let otherShare = 0;
+
         shareRows.forEach(row => {
             if (!row.name) return;
             if (!totals[row.name]) {
-                totals[row.name] = { name: row.name, paid: 0, owed: 0 };
+                totals[row.name] = {
+                    name: row.name,
+                    paidTotal: 0,
+                    personal: 0,
+                    selfPaid: 0,
+                    advancedForOthers: 0,
+                    owedToOthers: 0
+                };
             }
-            totals[row.name].owed += Number(row.amount || 0);
+            const shareAmount = Number(row.amount || 0);
+            totals[row.name].personal += shareAmount;
+            if (row.name === payer) {
+                payerShare += shareAmount;
+            } else {
+                otherShare += shareAmount;
+                totals[row.name].owedToOthers += shareAmount;
+            }
             nameSet.add(row.name);
         });
+
+        if (payer && totals[payer]) {
+            totals[payer].selfPaid += payerShare;
+            totals[payer].advancedForOthers += otherShare;
+        }
     });
 
     return Array.from(nameSet).map(name => ({
         name,
-        paid: Math.round(totals[name]?.paid || 0),
-        owed: Math.round(totals[name]?.owed || 0),
-        balance: Math.round((totals[name]?.paid || 0) - (totals[name]?.owed || 0))
+        paid: Math.round(totals[name]?.advancedForOthers || 0),
+        owed: Math.round(totals[name]?.personal || 0),
+        paidTotal: Math.round(totals[name]?.paidTotal || 0),
+        personal: Math.round(totals[name]?.personal || 0),
+        selfPaid: Math.round(totals[name]?.selfPaid || 0),
+        advancedForOthers: Math.round(totals[name]?.advancedForOthers || 0),
+        owedToOthers: Math.round(totals[name]?.owedToOthers || 0),
+        balance: Math.round((totals[name]?.advancedForOthers || 0) - (totals[name]?.owedToOthers || 0))
     }));
 }
 
@@ -967,6 +1008,56 @@ function buildSettlementSuggestions(balanceRows) {
     return suggestions;
 }
 
+function addDirectSettlementAmount(matrix, from, to, amount) {
+    const roundedAmount = Math.round(Number(amount || 0));
+    if (!from || !to || from === to || roundedAmount === 0) return;
+
+    if (roundedAmount < 0) {
+        addDirectSettlementAmount(matrix, to, from, Math.abs(roundedAmount));
+        return;
+    }
+
+    const key = `${from}\u0000${to}`;
+    matrix[key] = (matrix[key] || 0) + roundedAmount;
+}
+
+function buildDirectSettlementSuggestions() {
+    const names = members.map(member => member.name);
+    const matrix = {};
+
+    expenses.forEach(expense => {
+        const payer = expense.payer;
+        const amountTwd = Number(expense.twd || 0);
+        if (!payer || !amountTwd || !names.length) return;
+
+        getExpenseShareRows(expense, names, amountTwd).forEach(row => {
+            if (!row.name || row.name === payer) return;
+            addDirectSettlementAmount(matrix, row.name, payer, row.amount);
+        });
+    });
+
+    const settledPairs = new Set();
+    const suggestions = [];
+
+    Object.keys(matrix).forEach(key => {
+        if (settledPairs.has(key)) return;
+
+        const [from, to] = key.split('\u0000');
+        const reverseKey = `${to}\u0000${from}`;
+        const amount = Math.round((matrix[key] || 0) - (matrix[reverseKey] || 0));
+        settledPairs.add(key);
+        settledPairs.add(reverseKey);
+
+        if (amount > 0.5) suggestions.push({ from, to, amount });
+        else if (amount < -0.5) suggestions.push({ from: to, to: from, amount: Math.abs(amount) });
+    });
+
+    return suggestions.sort((a, b) => {
+        if (b.amount !== a.amount) return b.amount - a.amount;
+        return `${a.from}${a.to}`.localeCompare(`${b.from}${b.to}`, 'zh-TW');
+    });
+}
+
 function renderBalancesAndSettlements() {
     const balanceRows = computeMemberBalances();
     const balanceGrid = $('#balance-grid');
@@ -974,9 +1065,9 @@ function renderBalancesAndSettlements() {
     if (!balanceGrid || !settlementList) return;
 
     const total = expenses.reduce((sum, item) => sum + Number(item.twd || 0), 0);
-    const totalOwed = balanceRows.reduce((sum, item) => sum + Number(item.owed || 0), 0);
+    const totalOwed = balanceRows.reduce((sum, item) => sum + Number(item.personal || item.owed || 0), 0);
     const unallocated = Math.max(0, Math.round(total) - Math.round(totalOwed));
-    const suggestions = buildSettlementSuggestions(balanceRows);
+    const suggestions = buildDirectSettlementSuggestions();
     const balanceHeader = $('#balances .card-title h2');
     const balanceIntro = $('#balances .card-title p');
     const settlementCard = $('#settlements');
@@ -995,8 +1086,10 @@ function renderBalancesAndSettlements() {
             </div>
             <strong class="balance-main-amount">${status} ${formatTwd(item.balance)}</strong>
             <div class="balance-breakdown">
-                <small><span>\u500b\u4eba\u65c5\u904a\u82b1\u8cbb</span><strong>${formatTwd(item.owed)}</strong></small>
-                <small><span>\u5df2\u4ed8\u6b3e / \u5df2\u588a\u4ed8</span><strong>${formatTwd(item.paid)}</strong></small>
+                <small><span>\u500b\u4eba\u65c5\u904a\u82b1\u8cbb</span><strong>${formatTwd(item.personal)}</strong></small>
+                <small><span>\u81ea\u4ed8\u500b\u4eba\u9805\u76ee</span><strong>${formatTwd(item.selfPaid)}</strong></small>
+                <small><span>\u4ee3\u588a\u5171\u540c\u652f\u51fa</span><strong>${formatTwd(item.advancedForOthers)}</strong></small>
+                <small><span>\u61c9\u4ed8\u4ed6\u4eba\u5206\u6524</span><strong>${formatTwd(item.owedToOthers)}</strong></small>
             </div>
         </article>`;
     }).join('');
@@ -1016,7 +1109,7 @@ function renderBalancesAndSettlements() {
         <section class="balance-section suggested-payments-section" aria-labelledby="suggested-payments-title">
             <div class="balance-section-head">
                 <h3 id="suggested-payments-title">\u5efa\u8b70\u4ed8\u6b3e</h3>
-                <p>\u4f9d\u76ee\u524d\u9918\u984d\u5b8c\u6210\u4ee5\u4e0b\u8f49\u5e33\u5373\u53ef\u7d50\u6e05\u3002</p>
+                <p>\u4f9d\u6bcf\u7b46\u4ee3\u588a\u660e\u7d30\u7d50\u7b97\uff0c\u81ea\u4ed8\u500b\u4eba\u9805\u76ee\u4e0d\u7d0d\u5165\u4ee3\u588a\u3002</p>
             </div>
             <div class="suggested-payment-list">${paymentRows}</div>
         </section>
