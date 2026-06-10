@@ -243,9 +243,7 @@ function seedDefaultData() {
 
   [
     ['mem_1', 'Dustin', '發起人', 'D'],
-    ['mem_2', 'Amy', '旅伴', 'A'],
-    ['mem_3', 'Ben', '旅伴', 'B'],
-    ['mem_4', 'Cindy', '旅伴', 'C']
+    ['mem_2', '阿泥', '旅伴', '泥'],
   ].forEach(([memberId, name, note, avatar]) => {
     appendObject(SHEET_NAMES.members, {
       member_id: memberId,
@@ -264,7 +262,7 @@ function seedDefaultData() {
     ['cat_3', '門票', '🎟', '自訂分類'],
     ['cat_4', '交通', '🚆', '預設分類'],
     ['cat_5', '住宿', '🏨', '預設分類'],
-    ['cat_6', '購物', '🛍', '預設分類']
+    ['cat_6', '購物', '🛒', '預設分類']
   ].forEach(([categoryId, name, icon, note]) => {
     appendObject(SHEET_NAMES.categories, {
       category_id: categoryId,
@@ -281,7 +279,8 @@ function seedDefaultData() {
     ['pay_1', '現金', '💵', '預設方式'],
     ['pay_2', 'Visa', '💳', '信用卡'],
     ['pay_3', 'LINE Pay', '📱', '行動支付'],
-    ['pay_4', 'Suica', '🚇', '交通卡']
+    ['pay_4', 'Suica', '🚇', '交通卡'],
+    ['pay_5', '中信', '💳', '信用卡'],
   ].forEach(([paymentMethodId, name, icon, note]) => {
     appendObject(SHEET_NAMES.paymentMethods, {
       payment_method_id: paymentMethodId,
@@ -1084,7 +1083,7 @@ function addTrip(payload) {
     ['門票', '🎟', '自訂分類'],
     ['交通', '🚆', '預設分類'],
     ['住宿', '🏨', '預設分類'],
-    ['購物', '🛍', '預設分類'],
+    ['購物', '🛒', '預設分類'],
     ['保險', '📄', '預設分類'],
   ].forEach(function(cat) {
     appendObject(SHEET_NAMES.categories, {
