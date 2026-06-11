@@ -1,5 +1,5 @@
 /* TripSplit merged app bundle. Source modules merged to keep the package under 20 files. */
-const GAS_DEPLOYMENT_ID = 'AKfycbz5FGJnb2QdJawvTfX9Ek8kgfpm-pZVHaHilgo5MisYfwxCOi2lR9z5wDyMUXGnslcizQ';
+const GAS_DEPLOYMENT_ID = 'AKfycbyvVW8qaErMom9RNLKsjlGJbOOcHq1byNysDAHqwNmMbpUHABC4uosTieBsMpq0bVTBgg';
 const GAS_WEB_APP_URL = `https://script.google.com/macros/s/${GAS_DEPLOYMENT_ID}/exec`;
 
 const GAS_WEB_APP_URLS = [GAS_WEB_APP_URL];
@@ -1242,16 +1242,18 @@ function openBalanceDetailModal(memberName, category = 'balance') {
     if (!modal || !title || !summary || !body || !balanceRow) return;
 
     const label = BALANCE_DETAIL_LABELS[category] || BALANCE_DETAIL_LABELS.balance;
-    const expected = Math.round(Math.abs(Number(balanceRow[category] ?? balanceRow.balance ?? 0)));
+    const expectedRaw = Math.round(Number(balanceRow[category] ?? balanceRow.balance ?? 0));
+    const expected = category === 'balance' ? Math.abs(expectedRaw) : expectedRaw;
+    const expectedText = category === 'balance' ? formatTwd(expected) : formatSignedTwd(expected);
     const rows = buildBalanceDetailRows(memberName, category);
     const actual = rows.reduce((sum, row) => sum + Math.round(Number(row.amount || 0)), 0);
     const isMatched = actual === expected;
 
     title.textContent = `${memberName} - ${label}`;
-    summary.textContent = `${label} ${formatTwd(expected)}，共 ${rows.length} 筆明細。`;
+    summary.textContent = `${label} ${expectedText}，共 ${rows.length} 筆明細。`;
     body.innerHTML = `
         <div class="balance-detail-total ${isMatched ? 'matched' : 'mismatch'}">
-          <div><span>\u756b\u9762\u7e3d\u984d</span><strong>${formatTwd(expected)}</strong></div>
+          <div><span>\u756b\u9762\u7e3d\u984d</span><strong>${expectedText}</strong></div>
           <div><span>\u660e\u7d30\u52a0\u7e3d</span><strong>${formatSignedTwd(actual)}</strong></div>
           ${isMatched ? '<p>\u660e\u7d30\u52a0\u7e3d\u8207\u756b\u9762\u7e3d\u984d\u4e00\u81f4\u3002</p>' : '<p>\u26a0 \u660e\u7d30\u52a0\u7e3d\u8207\u756b\u9762\u7e3d\u984d\u4e0d\u4e00\u81f4\uff0c\u8acb\u6aa2\u67e5\u5206\u6524\u660e\u7d30\u3002</p>'}
         </div>
@@ -1298,10 +1300,10 @@ function renderBalancesAndSettlements() {
             </div>
             <button class="balance-detail-trigger balance-main-amount ${className}" type="button" ${detailButtonAttrs} data-balance-detail-category="balance" aria-label="查看 ${escapeHtml(item.name)} ${status}總額明細">${status} ${formatTwd(item.balance)}</button>
             <div class="balance-breakdown">
-                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="personal"><span>\u500b\u4eba\u65c5\u904a\u82b1\u8cbb</span><strong>${formatTwd(item.personal)}</strong></button>
-                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="selfPaid"><span>\u81ea\u4ed8\u500b\u4eba\u9805\u76ee</span><strong>${formatTwd(item.selfPaid)}</strong></button>
-                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="advancedForOthers"><span>\u4ee3\u588a\u5171\u540c\u652f\u51fa</span><strong>${formatTwd(item.advancedForOthers)}</strong></button>
-                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="owedToOthers"><span>\u61c9\u4ed8\u4ed6\u4eba\u5206\u6524</span><strong>${formatTwd(item.owedToOthers)}</strong></button>
+                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="personal"><span>\u500b\u4eba\u65c5\u904a\u82b1\u8cbb</span><strong>${formatSignedTwd(item.personal)}</strong></button>
+                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="selfPaid"><span>\u81ea\u4ed8\u500b\u4eba\u9805\u76ee</span><strong>${formatSignedTwd(item.selfPaid)}</strong></button>
+                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="advancedForOthers"><span>\u4ee3\u588a\u5171\u540c\u652f\u51fa</span><strong>${formatSignedTwd(item.advancedForOthers)}</strong></button>
+                <button type="button" class="balance-detail-line" ${detailButtonAttrs} data-balance-detail-category="owedToOthers"><span>\u61c9\u4ed8\u4ed6\u4eba\u5206\u6524</span><strong>${formatSignedTwd(item.owedToOthers)}</strong></button>
             </div>
         </article>`;
     }).join('');
@@ -1357,6 +1359,14 @@ function updateExchangePreview() {
 
 function getSelectedParticipants() {
     return Array.from(document.querySelectorAll('#participant-options input:checked')).map(input => input.value);
+}
+
+function validateRefundPayerParticipant(selected, payer, totalAmount) {
+    if (Number(totalAmount || 0) >= 0) return true;
+    if (!payer || selected.includes(payer)) return true;
+
+    alert('退稅/退款金額為負數時，付款人也需要勾選分攤，才能按比例折抵購買人的個人花費。');
+    return false;
 }
 
 function distributeIntegerPercent(count) {
@@ -1453,10 +1463,14 @@ function renderSplitConfig() {
     updateSplitSummary();
 }
 
-function validateSplitInputs(splitType, totalAmount) {
+function validateSplitInputs(splitType, totalAmount, payer) {
     const selected = getSelectedParticipants();
     if (!selected.length) {
         alert('請至少勾選一位分帳對象。');
+        return { ok: false };
+    }
+
+    if (!validateRefundPayerParticipant(selected, payer, totalAmount)) {
         return { ok: false };
     }
 
@@ -1476,7 +1490,11 @@ function validateSplitInputs(splitType, totalAmount) {
     const splitDetails = [];
     for (const input of inputs) {
         const value = Number(input.value);
-        if (!(value >= 0)) {
+        const invalidValue = !Number.isFinite(value)
+            || (splitType === '百分比分' && value < 0)
+            || (splitType === '自訂金額' && Number(totalAmount || 0) >= 0 && value < 0)
+            || (splitType === '自訂金額' && Number(totalAmount || 0) < 0 && value > 0);
+        if (invalidValue) {
             alert(`請輸入 ${input.dataset.member} 的分帳數值。`);
             input.focus();
             return { ok: false };
@@ -2313,7 +2331,8 @@ function buildExpenseDetail(expense) {
     const paidAmount = `NT$ ${money.format(Math.round(expense.twd || 0))}`;
     const participantRows = participants.map(item => {
         const share = Number(item.share_amount_twd || 0);
-        const amountText = share ? `NT$ ${money.format(Math.round(share))}` : '金額未設定';
+        const hasShareAmount = item.share_amount_twd !== '' && item.share_amount_twd !== null && item.share_amount_twd !== undefined;
+        const amountText = hasShareAmount ? formatSignedTwd(share) : '金額未設定';
         return `
             <div class="expense-detail-row settlement-row">
               <span>${escapeHtml(item.member_name || '未命名')}</span>
@@ -2505,7 +2524,9 @@ function getExpenseParticipantCount(expense) {
 
 function getExpenseAverageShare(expense) {
     const details = Array.isArray(expense.splitDetails) ? expense.splitDetails : [];
-    const shares = details.map(item => Number(item.share_amount_twd || 0)).filter(value => value > 0);
+    const shares = details
+        .map(item => Number(item.share_amount_twd || 0))
+        .filter(value => Number.isFinite(value) && value !== 0);
     if (shares.length) return shares.reduce((sum, value) => sum + value, 0) / shares.length;
 
     const participantCount = getExpenseParticipantCount(expense);
@@ -2903,10 +2924,14 @@ function updateEditSplitSummary() {
     summary.textContent = diff === 0 ? '已符合原始金額' : `目前合計 ${formatAmountValue(total)}，差 ${formatAmountValue(Math.abs(diff))}`;
 }
 
-function validateEditSplitInputs(splitType, totalAmount) {
+function validateEditSplitInputs(splitType, totalAmount, payer) {
     const selected = getEditSelectedParticipants();
     if (!selected.length) {
         alert('請至少選擇一位分帳對象。');
+        return { ok: false };
+    }
+
+    if (!validateRefundPayerParticipant(selected, payer, totalAmount)) {
         return { ok: false };
     }
 
@@ -2923,7 +2948,11 @@ function validateEditSplitInputs(splitType, totalAmount) {
     const splitDetails = [];
     for (const input of inputs) {
         const value = Number(input.value);
-        if (!(value >= 0)) {
+        const invalidValue = !Number.isFinite(value)
+            || (splitType === '百分比分' && value < 0)
+            || (splitType === '自訂金額' && Number(totalAmount || 0) >= 0 && value < 0)
+            || (splitType === '自訂金額' && Number(totalAmount || 0) < 0 && value > 0);
+        if (invalidValue) {
             alert(`請輸入 ${input.dataset.member} 的有效數字。`);
             input.focus();
             return { ok: false };
@@ -2996,7 +3025,7 @@ function buildEditExpensePayload() {
     const split = getEditSplitType();
 
     if (!activeEditingExpenseId || !$('#edit-expense-title')?.value.trim() || !selectedCategory || !selectedPayment || !amount) return null;
-    const splitValidation = validateEditSplitInputs(split, amount);
+    const splitValidation = validateEditSplitInputs(split, amount, $('#edit-paid-by')?.value || '');
     if (!splitValidation.ok) return null;
 
     return {
@@ -3641,7 +3670,7 @@ function bindExpenseForm() {
         const split = document.querySelector('input[name="split_type"]:checked')?.value || '平均分';
         if (!$('#expense-title').value.trim() || !selectedCategory || !selectedPayment || !amount) return;
 
-        const splitValidation = validateSplitInputs(split, amount);
+        const splitValidation = validateSplitInputs(split, amount, $('#paid-by')?.value || '');
         if (!splitValidation.ok) return;
 
         setStatus('正在處理收據照片...');

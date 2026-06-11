@@ -527,6 +527,9 @@ function writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd
 
   const splitType = payload.split_type || '平均分';
   const participantsCount = participantNames.length || 1;
+
+  validateRefundPayerParticipant_(participantNames, payload.payer_member_name, amountTwd);
+
   const shareRows = participantNames.map(function(memberName, index) {
     const detail = splitMap[memberName] || {};
     let shareAmountTwd = '';
@@ -561,6 +564,8 @@ function writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd
     shareRows[shareRows.length - 1].shareAmountTwd = Number(shareRows[shareRows.length - 1].shareAmountTwd || 0) + diff;
   }
 
+  validateExpenseParticipantShares_(shareRows, amountTwd);
+
   shareRows.forEach(function(row) {
     appendObject(SHEET_NAMES.participants, {
       participant_id: createId('part'),
@@ -571,6 +576,32 @@ function writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd
       created_at: now
     });
   });
+}
+
+function validateRefundPayerParticipant_(participantNames, payerMemberName, amountTwd) {
+  if (Math.round(Number(amountTwd || 0)) >= 0) return;
+
+  const payer = String(payerMemberName || '').trim();
+  if (!payer) return;
+
+  const hasPayer = (participantNames || []).some(function(name) {
+    return String(name || '').trim() === payer;
+  });
+
+  if (!hasPayer) {
+    throw new Error('Refund expense must include payer in participants so the refund reduces the buyer share.');
+  }
+}
+
+function validateExpenseParticipantShares_(shareRows, amountTwd) {
+  const expectedTotal = Math.round(Number(amountTwd || 0));
+  const actualTotal = (shareRows || []).reduce(function(sum, row) {
+    return sum + Math.round(Number(row.shareAmountTwd || 0));
+  }, 0);
+
+  if (actualTotal !== expectedTotal) {
+    throw new Error('Split shares must equal expense amount. Expected ' + expectedTotal + ', got ' + actualTotal + '.');
+  }
 }
 
 function splitIntegerAmount_(amount, count) {
