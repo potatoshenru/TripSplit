@@ -539,7 +539,7 @@ function writeExpenseParticipants_(expenseId, payload, amountOriginal, amountTwd
     } else if (splitType === '自訂金額') {
       const shareAmountOriginal = Number(detail.share_amount_original || 0);
       shareAmountTwd = Math.round(shareAmountOriginal * rate);
-      if (amountOriginal > 0) {
+      if (amountOriginal !== 0) {
         sharePercentage = Number(((shareAmountOriginal / amountOriginal) * 100).toFixed(4));
       }
     } else {

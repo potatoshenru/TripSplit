@@ -1,5 +1,5 @@
 /* TripSplit merged app bundle. Source modules merged to keep the package under 20 files. */
-const GAS_DEPLOYMENT_ID = 'AKfycbyh95jwvX5s_eYKrs85jiebRU27uq5pYX2zLaVJ3NCkwTadpNEpMtXHg9ORMqTGJwwBGg';
+const GAS_DEPLOYMENT_ID = 'AKfycbz5FGJnb2QdJawvTfX9Ek8kgfpm-pZVHaHilgo5MisYfwxCOi2lR9z5wDyMUXGnslcizQ';
 const GAS_WEB_APP_URL = `https://script.google.com/macros/s/${GAS_DEPLOYMENT_ID}/exec`;
 
 const GAS_WEB_APP_URLS = [GAS_WEB_APP_URL];
@@ -939,7 +939,7 @@ function getExpenseShareRows(expense, memberNames, amountTwd) {
             amount: Number(detail.share_amount_twd || 0),
             hasAmount: detail.share_amount_twd !== '' && detail.share_amount_twd !== null && detail.share_amount_twd !== undefined
         }))
-        .filter(detail => detail.name && detail.hasAmount && detail.amount >= 0);
+        .filter(detail => detail.name && detail.hasAmount && Number.isFinite(detail.amount));
 
     if (usableDetails.length) {
         return normalizeShareRounding(usableDetails, amountTwd);
@@ -1440,7 +1440,7 @@ function renderSplitConfig() {
             class="split-input"
             data-member="${name}"
             data-kind="${kind}"
-            min="0"
+            ${isPercent ? 'min="0"' : ''}
             step="${isPercent ? '1' : '0.01'}"
             value="${isPercent ? defaultValues[index] : formatAmountValue(defaultValues[index])}"
             placeholder="${isPercent ? '例如 25' : '例如 1200'}"
@@ -2878,7 +2878,7 @@ function renderEditSplitConfig(expense = getExpenseById(activeEditingExpenseId))
             ${selected.map((name, index) => `
                 <div class="split-input-row">
                     <span>${escapeHtml(name)} 分攤</span>
-                    <input class="split-input" type="number" data-member="${escapeHtml(name)}" data-kind="${kind}" min="0" step="${isPercent ? '1' : '0.01'}" value="${formatAmountValue(defaults[index])}" />
+                    <input class="split-input" type="number" data-member="${escapeHtml(name)}" data-kind="${kind}" ${isPercent ? 'min="0"' : ''} step="${isPercent ? '1' : '0.01'}" value="${formatAmountValue(defaults[index])}" />
                 </div>
             `).join('')}
         </div>
