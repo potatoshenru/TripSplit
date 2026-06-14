@@ -50,6 +50,7 @@ let members = [];
 let categories = [];
 let paymentMethods = [];
 let expenses = [];
+let selectedCategory = '';
 let expenseReceipts = [];
 let expenseParticipants = [];
 let selectedReceiptFiles = [];
@@ -733,8 +734,20 @@ function parseMergedNoteLines(note) {
     const text = String(note || '').trim();
     if (!text) return [];
 
-    const lines = text.split(/\r?\n/);
-    return lines.map(line => {
+    const matches = [...text.matchAll(/(\d{4}-\d{2}-\d{2})\|(.+?)\|(\d+)(?=\s+\d{4}-\d{2}-\d{2}\||$)/gs)];
+    if (matches.length) {
+        return matches.map(match => {
+            const item = match[2].trim();
+            if (!item) return null;
+            return {
+                date: match[1],
+                item,
+                amount: Number(match[3])
+            };
+        });
+    }
+
+    return text.split(/\r?\n/).map(line => {
         const match = line.trim().match(/^(\d{4}-\d{2}-\d{2})\|([^|]+)\|(\d+)$/);
         if (!match) return null;
         const item = match[2].trim();
@@ -1266,6 +1279,206 @@ function openBalanceDetailModal(memberName, category = 'balance') {
 
 function closeBalanceDetailModal() {
     const modal = $('#balance-detail-modal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function getExpenseCategoryLabel(expense) {
+    const label = String(expense?.category || '').trim();
+    return label || '未分類';
+}
+
+function getCategoryDetailRows(categoryName) {
+    const selected = String(categoryName || '').trim() || '未分類';
+    return expenses.filter(expense => getExpenseCategoryLabel(expense) === selected);
+}
+
+function hasSplitValue(value) {
+    if (value === '' || value === null || value === undefined) return false;
+    const number = Number(value);
+    return Number.isFinite(number) && number !== 0;
+}
+
+function getExpenseSplitRowsForCategoryDetail(expense) {
+    const amountTwd = Number(expense?.twd || 0);
+    const rate = Number(expense?.rate || 1) || 1;
+    const details = Array.isArray(expense?.splitDetails) ? expense.splitDetails.filter(item => item?.member_name) : [];
+    const participants = Array.isArray(expense?.participants) ? expense.participants.filter(Boolean) : [];
+    const sourceRows = details.length
+        ? details
+        : participants.map(name => ({ member_name: name }));
+
+    if (!sourceRows.length) return [];
+
+    return sourceRows.map((item) => {
+        const rawAmountTwd = hasSplitValue(item.share_amount_twd)
+            ? Number(item.share_amount_twd)
+            : hasSplitValue(item.share_amount_original)
+                ? Number(item.share_amount_original) * rate
+                : 0;
+        const rawPercent = hasSplitValue(item.share_percentage) ? Number(item.share_percentage) : 0;
+        const isEvenSplitFallback = !rawAmountTwd && !rawPercent && sourceRows.length > 0 && String(expense?.split || '').includes('平均');
+        const amount = rawAmountTwd
+            || (rawPercent && amountTwd ? amountTwd * (rawPercent / 100) : 0)
+            || (isEvenSplitFallback ? amountTwd / sourceRows.length : 0);
+        const percent = rawPercent
+            || (amount && amountTwd ? (amount / amountTwd) * 100 : 0)
+            || (isEvenSplitFallback ? 100 / sourceRows.length : 0);
+
+        return {
+            name: item.member_name,
+            amount,
+            percent,
+            hasShare: Boolean(amount || percent)
+        };
+    });
+}
+
+function formatSplitPercent(value) {
+    const percent = Number(value || 0);
+    if (!Number.isFinite(percent) || percent === 0) return '-';
+    const rounded = Math.round(percent * 10) / 10;
+    return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}%`;
+}
+
+function buildCategorySplitCell(rows, key) {
+    if (!rows.length) return key === 'name' ? '未設定分攤' : '-';
+    return rows.map(row => {
+        if (!row.hasShare && key !== 'name') return '-';
+        if (key === 'name') return escapeHtml(row.name || '未命名');
+        if (key === 'amount') return row.amount ? `NT$ ${money.format(Math.round(row.amount))}` : '-';
+        return formatSplitPercent(row.percent);
+    }).map(value => `<div class="category-split-line">${value}</div>`).join('');
+}
+
+function buildCategorySplitCardRows(rows) {
+    if (!rows.length) return '<p class="category-detail-card-empty">未設定分攤</p>';
+    return rows.map(row => {
+        const amountText = row.amount ? `NT$ ${money.format(Math.round(row.amount))}` : '金額未設定';
+        const percentText = formatSplitPercent(row.percent);
+        const detailText = row.hasShare ? `${amountText}（${percentText}）` : amountText;
+        return `
+            <div class="category-detail-split-row">
+              <span>${escapeHtml(row.name || '未命名')}</span>
+              <strong>${escapeHtml(detailText)}</strong>
+            </div>`;
+    }).join('');
+}
+
+function getCategoryPlainNote(expense) {
+    const note = String(expense?.note || '').trim();
+    if (!note || isMergedDetailNote(note)) return '';
+    return note;
+}
+
+function buildCategoryExpenseDetailBlock(expense) {
+    const note = String(expense?.note || '').trim();
+    if (!note || !isMergedDetailNote(note)) return '';
+    return buildExpenseNote(expense);
+}
+
+function buildCategoryDetailCards(rows) {
+    if (!rows.length) return '';
+    return `
+        <div class="category-detail-card-list" aria-label="分類明細卡片">
+          ${rows.map(expense => {
+              const note = getCategoryPlainNote(expense);
+              const detailBlock = buildCategoryExpenseDetailBlock(expense);
+              const splitRows = getExpenseSplitRowsForCategoryDetail(expense);
+              return `
+                <article class="category-detail-card">
+                  <div class="category-detail-card-head">
+                    <div>
+                      <span class="category-detail-card-date">日期：${escapeHtml(formatExpenseTableDate(expense))}</span>
+                      <h3>品項：${escapeHtml(expense.title || '未命名支出')}</h3>
+                    </div>
+                    <strong>NT$ ${money.format(Math.round(Number(expense.twd || 0)))}</strong>
+                  </div>
+                  <div class="category-detail-card-meta">
+                    <div><span>付款人</span><strong>${escapeHtml(expense.payer || '未設定')}</strong></div>
+                    <div><span>總金額</span><strong>NT$ ${money.format(Math.round(Number(expense.twd || 0)))}</strong></div>
+                  </div>
+                  <section class="category-detail-split-box">
+                    <h4>分攤明細</h4>
+                    ${buildCategorySplitCardRows(splitRows)}
+                  </section>
+                  ${detailBlock ? `<section class="category-detail-merged-box"><h4>明細</h4>${detailBlock}</section>` : ''}
+                  <div class="category-detail-card-note"><span>備註</span><p>${note ? escapeHtml(note) : '-'}</p></div>
+                </article>`;
+          }).join('')}
+        </div>`;
+}
+
+function buildCategoryDetailTable(rows, categoryName) {
+    if (!rows.length) return `<p class="field-hint">目前沒有${escapeHtml(categoryName)}明細</p>`;
+
+    return `
+        <div class="balance-detail-table-wrap category-detail-table-wrap">
+          <table class="balance-detail-table">
+            <thead>
+              <tr>
+                <th scope="col">日期</th>
+                <th scope="col">品項 / 說明</th>
+                <th scope="col">付款人</th>
+                <th scope="col" class="numeric">金額</th>
+                <th scope="col">分攤人</th>
+                <th scope="col" class="numeric">分攤金額</th>
+                <th scope="col" class="numeric">分攤比例</th>
+                <th scope="col">明細</th>
+                <th scope="col">備註</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(expense => {
+                  const note = getCategoryPlainNote(expense);
+                  const detailBlock = buildCategoryExpenseDetailBlock(expense);
+                  const splitRows = getExpenseSplitRowsForCategoryDetail(expense);
+                  return `
+                    <tr>
+                      <td data-label="日期">${escapeHtml(formatExpenseTableDate(expense))}</td>
+                      <td data-label="品項 / 說明">${escapeHtml(expense.title || '未命名支出')}</td>
+                      <td data-label="付款人">${escapeHtml(expense.payer || '未設定')}</td>
+                      <td data-label="金額" class="numeric"><strong>NT$ ${money.format(Math.round(Number(expense.twd || 0)))}</strong></td>
+                      <td data-label="分攤人">${buildCategorySplitCell(splitRows, 'name')}</td>
+                      <td data-label="分攤金額" class="numeric">${buildCategorySplitCell(splitRows, 'amount')}</td>
+                      <td data-label="分攤比例" class="numeric">${buildCategorySplitCell(splitRows, 'percent')}</td>
+                      <td data-label="明細" class="category-detail-merged-cell">${detailBlock || '-'}</td>
+                      <td data-label="備註">${note ? escapeHtml(note) : '-'}</td>
+                    </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        ${buildCategoryDetailCards(rows)}`;
+}
+
+function openCategoryDetailModal(categoryName) {
+    const modal = $('#category-detail-modal');
+    const title = $('#category-detail-title');
+    const summary = $('#category-detail-summary');
+    const body = $('#category-detail-body');
+    if (!modal || !title || !summary || !body) return;
+
+    selectedCategory = String(categoryName || '').trim() || '未分類';
+    const rows = getCategoryDetailRows(selectedCategory);
+    const total = rows.reduce((sum, expense) => sum + Number(expense.twd || 0), 0);
+
+    title.textContent = `${selectedCategory}明細`;
+    summary.textContent = `${selectedCategory}合計：NT$${money.format(Math.round(total))}`;
+    body.innerHTML = `
+        <div class="balance-detail-total">
+          <div><span>${escapeHtml(selectedCategory)}合計</span><strong>NT$ ${money.format(Math.round(total))}</strong></div>
+        </div>
+        ${buildCategoryDetailTable(rows, selectedCategory)}
+    `;
+
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeCategoryDetailModal() {
+    const modal = $('#category-detail-modal');
     if (!modal) return;
     modal.classList.remove('show');
     modal.setAttribute('aria-hidden', 'true');
@@ -3258,7 +3471,8 @@ function bindGlobalClicks() {
             const noteKey = mergedNoteToggle.dataset.toggleMergedNote || '';
             if (expandedMergedNoteIds.has(noteKey)) expandedMergedNoteIds.delete(noteKey);
             else expandedMergedNoteIds.add(noteKey);
-            renderExpenses();
+            if ($('#category-detail-modal')?.classList.contains('show')) openCategoryDetailModal(selectedCategory);
+            else renderExpenses();
             return;
         }
 
@@ -3345,6 +3559,12 @@ function bindGlobalClicks() {
         const closeBalanceDetailButton = event.target.closest('[data-close-balance-detail-modal]');
         if (closeBalanceDetailButton) {
             closeBalanceDetailModal();
+            return;
+        }
+
+        const closeCategoryDetailButton = event.target.closest('[data-close-category-detail-modal]');
+        if (closeCategoryDetailButton) {
+            closeCategoryDetailModal();
             return;
         }
 
@@ -4289,13 +4509,15 @@ function bindKeyboard() {
             const noteKey = mergedNoteKeyboardToggle.dataset.toggleMergedNote || '';
             if (expandedMergedNoteIds.has(noteKey)) expandedMergedNoteIds.delete(noteKey);
             else expandedMergedNoteIds.add(noteKey);
-            renderExpenses();
+            if ($('#category-detail-modal')?.classList.contains('show')) openCategoryDetailModal(selectedCategory);
+            else renderExpenses();
             return;
         }
 
         const hasOpenModal = $('#expense-edit-modal')?.classList.contains('show') ||
             $('#import-text-modal')?.classList.contains('show') ||
             $('#balance-detail-modal')?.classList.contains('show') ||
+            $('#category-detail-modal')?.classList.contains('show') ||
             $('#receipt-upload-modal')?.classList.contains('show') ||
             $('#receipt-modal')?.classList.contains('show') ||
             $('#chart-zoom-modal')?.classList.contains('show');
@@ -4349,6 +4571,10 @@ function bindKeyboard() {
         }
         if ($('#balance-detail-modal')?.classList.contains('show')) {
             closeBalanceDetailModal();
+            return;
+        }
+        if ($('#category-detail-modal')?.classList.contains('show')) {
+            closeCategoryDetailModal();
             return;
         }
         if ($('#receipt-upload-modal')?.classList.contains('show')) {

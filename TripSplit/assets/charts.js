@@ -1,6 +1,10 @@
 const chartColors = ['#b56f18', '#557f3f', '#b84a3d', '#386fa4', '#8a5f9e', '#c76f2d', '#2f7f74', '#9a6b3f'];
 let chartHitRegions = [];
 
+function escapeChartHtml(value) {
+  return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function formatChartDateLabel(label) {
   const value = String(label || '');
   if (/^\d{4}-\d{2}-\d{2}$/.test(value) && typeof formatRocDate === 'function') return formatRocDate(value);
@@ -512,12 +516,15 @@ function renderChartLegend(rows, options = {}) {
       : options.budgetMode
         ? `${item.budgetText || `實際 NT$ ${money.format(Math.round(item.value || 0))}`}`
         : `${item.direction ? `${item.direction} ` : ''}NT$ ${money.format(Math.round(item.value || 0))}`;
+    const tagName = options.categoryDetail ? 'button' : 'div';
+    const typeAttr = options.categoryDetail ? ' type="button"' : '';
+    const categoryAttr = options.categoryDetail ? ` data-chart-category-detail="${escapeChartHtml(item.label)}"` : '';
 
     return `
-      <div class="chart-legend-item">
+      <${tagName} class="chart-legend-item"${typeAttr}${categoryAttr}>
         <span class="chart-swatch" style="background:${swatchColor}"></span>
         <span>${item.label}・${suffix}</span>
-      </div>
+      </${tagName}>
     `;
   }).join('');
 }
@@ -910,11 +917,45 @@ function bindCanvasHover(canvasSelector, tooltipSelector, regionGetter) {
   canvas.addEventListener('mouseleave', () => hideChartTooltip({ canvasSelector, tooltipSelector }));
 }
 
+function openCategoryDetailFromChart(label) {
+  if (typeof openCategoryDetailModal !== 'function') return;
+  openCategoryDetailModal(label);
+}
+
+function bindCategoryChartClicks() {
+  const canvas = $('#expense-chart');
+  if (canvas) {
+    canvas.addEventListener('click', (event) => {
+      if (getSelectedChartType() !== 'pie') return;
+      const rect = canvas.getBoundingClientRect();
+      const region = getChartRegionAt(event.clientX - rect.left, event.clientY - rect.top, chartHitRegions);
+      if (region?.type === 'pie') openCategoryDetailFromChart(region.label);
+    });
+  }
+
+  const zoomCanvas = $('#chart-zoom-canvas');
+  if (zoomCanvas) {
+    zoomCanvas.addEventListener('click', (event) => {
+      if (chartZoomMode !== 'expense' || getSelectedChartType() !== 'pie') return;
+      const rect = zoomCanvas.getBoundingClientRect();
+      const region = getChartRegionAt(event.clientX - rect.left, event.clientY - rect.top, zoomChartHitRegions);
+      if (region?.type === 'pie') openCategoryDetailFromChart(region.label);
+    });
+  }
+
+  document.addEventListener('click', (event) => {
+    const legendItem = event.target.closest('[data-chart-category-detail]');
+    if (!legendItem) return;
+    openCategoryDetailFromChart(legendItem.dataset.chartCategoryDetail || '');
+  });
+}
+
 function bindChartInteractions() {
   if (chartInteractionsBound) return;
   bindCanvasHover('#expense-chart', '#chart-tooltip', () => chartHitRegions);
   bindCanvasHover('#budget-chart', '#budget-chart-tooltip', () => budgetChartHitRegions);
   bindCanvasHover('#chart-zoom-canvas', '#chart-zoom-tooltip', () => zoomChartHitRegions);
+  bindCategoryChartClicks();
   chartInteractionsBound = true;
 }
 
@@ -985,7 +1026,7 @@ function renderExpenseChart() {
   if (chartType === 'payer') drawHorizontalBarChart(context, rows.slice(0, 8), width, height);
   else if (chartType === 'balance') drawHorizontalBarChart(context, rows.slice(0, 8), width, height, { balanceMode: true });
   else drawPieChart(context, rows.slice(0, 8), width, height);
-  renderChartLegend(rows.slice(0, 8), { legendSelector: '#chart-legend' });
+  renderChartLegend(rows.slice(0, 8), { legendSelector: '#chart-legend', categoryDetail: chartType === 'pie' });
 }
 
 function renderBudgetChart() {
@@ -1081,16 +1122,23 @@ function renderZoomChart() {
       return;
     }
 
+    const previousChartHitRegions = chartHitRegions;
+    chartHitRegions = [];
+    const finishZoomExpenseChart = () => {
+      zoomChartHitRegions = [...chartHitRegions];
+      chartHitRegions = previousChartHitRegions;
+    };
+
     if (chartType === 'bar') {
       drawBarChart(context, rows.slice(0, 8), width, height);
       renderChartLegend(rows.slice(0, 8), { legendSelector: '#chart-zoom-legend' });
-      zoomChartHitRegions = [...chartHitRegions];
+      finishZoomExpenseChart();
       return;
     }
     if (chartType === 'line') {
       drawLineChart(context, rows, width, height);
       renderChartLegend(rows.slice(-6), { legendSelector: '#chart-zoom-legend' });
-      zoomChartHitRegions = [...chartHitRegions];
+      finishZoomExpenseChart();
       return;
     }
     if (chartType === 'category_trend') {
@@ -1098,7 +1146,7 @@ function renderZoomChart() {
       const legendRows = trendData.series.map(item => ({ label: item.label, value: item.value }));
       const colorByLabel = trendData.series.reduce((map, item) => ({ ...map, [item.label]: item.color }), {});
       renderChartLegend(legendRows, { legendSelector: '#chart-zoom-legend', colorByLabel });
-      zoomChartHitRegions = [...chartHitRegions];
+      finishZoomExpenseChart();
       return;
     }
     if (chartType === 'currency') {
@@ -1111,21 +1159,21 @@ function renderZoomChart() {
         return { ...region, type: 'currency', label: row.label, value: row.value, total, originalTotal: row.originalTotal, count: row.count, x: region.centerX, y: region.centerY, radius: region.radius };
       });
       renderChartLegend(pieRows, { legendSelector: '#chart-zoom-legend', currencyMode: true });
-      zoomChartHitRegions = [...chartHitRegions];
+      finishZoomExpenseChart();
       return;
     }
     if (chartType === 'heatmap') {
       drawHeatmapChart(context, rows, width, height);
       renderChartLegend(rows.slice(-6), { legendSelector: '#chart-zoom-legend' });
-      zoomChartHitRegions = [...chartHitRegions];
+      finishZoomExpenseChart();
       return;
     }
 
     if (chartType === 'payer') drawHorizontalBarChart(context, rows.slice(0, 8), width, height);
     else if (chartType === 'balance') drawHorizontalBarChart(context, rows.slice(0, 8), width, height, { balanceMode: true });
     else drawPieChart(context, rows.slice(0, 8), width, height);
-    renderChartLegend(rows.slice(0, 8), { legendSelector: '#chart-zoom-legend' });
-    zoomChartHitRegions = [...chartHitRegions];
+    renderChartLegend(rows.slice(0, 8), { legendSelector: '#chart-zoom-legend', categoryDetail: chartType === 'pie' });
+    finishZoomExpenseChart();
     return;
   }
 

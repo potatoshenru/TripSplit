@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TripSplit｜快速記帳</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' font-size='48'%3E%E6%97%85%3C/text%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="./assets/app.css?v=260611_1411" />
+    <link rel="stylesheet" href="./assets/app.css?v=260614_1411" />
 </head>
 <body data-page="home">
     <header class="app-header">
@@ -370,8 +370,23 @@
         </div>
     </div>
 
+    <div class="receipt-modal" id="category-detail-modal" aria-hidden="true" role="dialog" aria-label="分類明細">
+        <div class="receipt-modal-backdrop" data-close-category-detail-modal="true"></div>
+        <div class="receipt-modal-panel category-detail-panel" role="document">
+            <div class="balance-detail-header">
+                <div>
+                    <span class="balance-detail-kicker">支出分類</span>
+                    <h2 id="category-detail-title">分類明細</h2>
+                    <p id="category-detail-summary">依目前支出資料篩選。</p>
+                </div>
+                <button class="receipt-modal-close" type="button" data-close-category-detail-modal="true" aria-label="關閉分類明細">×</button>
+            </div>
+            <div id="category-detail-body" class="balance-detail-body"></div>
+        </div>
+    </div>
+
     <script src="./assets/roc-date.js?v=3"></script>
     <script src="./assets/charts.js?v=2"></script>
-    <script src="./assets/app.js?v=260611_1411"></script>
+    <script src="./assets/app.js?v=260614_1411"></script>
 </body>
 </html>
