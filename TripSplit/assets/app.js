@@ -57,8 +57,11 @@ let selectedReceiptFiles = [];
 let selectedReceiptUploadFiles = [];
 let activeReceiptUploadExpenseId = '';
 let exchangeRates = { JPY: 0.2185, USD: 32.1, KRW: 0.0235, EUR: 34.8, THB: 0.88, TWD: 1 };
+let activeLoadToken = 0;
 
 const MAX_RECEIPT_FILES = 10;
+const TRIP_DATA_CACHE_VERSION = 1;
+const TRIP_DATA_CACHE_PREFIX = 'tripsplit_cache_';
 
 const fallbackDataByTrip = {
     trip_default: {
@@ -194,6 +197,87 @@ function setStatus(message, type = 'info') {
     const dotColor = type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--orange)';
     notice.classList.toggle('is-floating', type !== 'success');
     notice.innerHTML = `<span class="status-dot" style="background:${dotColor}"></span>${message}`;
+}
+
+function setLoading(isLoading) {
+    document.body.classList.toggle('is-loading', Boolean(isLoading));
+
+    const selectors = [
+        ['#trip-select', isPreviewMode],
+        ['#trip-switch-form button', isPreviewMode],
+        ['#expense-create-form button[type="submit"]', isPreviewMode || isCurrentTripArchived()],
+        ['#member-form button[type="submit"]', isPreviewMode || isCurrentTripArchived()],
+        ['#category-form button[type="submit"]', isPreviewMode || isCurrentTripArchived()],
+        ['#payment-form button[type="submit"]', isPreviewMode || isCurrentTripArchived()],
+        ['#archive-trip-btn', isPreviewMode || isCurrentTripArchived()]
+    ];
+
+    selectors.forEach(([selector, disabledWhenIdle]) => {
+        const el = $(selector);
+        if (el) el.disabled = Boolean(isLoading) || Boolean(disabledWhenIdle);
+    });
+}
+
+function setStatusWithRetry(message, tripId = currentTripId) {
+    const notice = $('#sync-status');
+    if (!notice) return;
+
+    notice.classList.add('is-floating');
+    notice.innerHTML = `
+        <span class="status-dot" style="background:var(--red)"></span>
+        <span>${escapeHtml(message)}</span>
+        <button type="button" id="retry-load-btn" class="mini-retry">Retry</button>
+    `;
+
+    $('#retry-load-btn')?.addEventListener('click', () => {
+        if (tripId && tripId !== currentTripId) {
+            currentTripId = tripId;
+            localStorage.setItem('tripsplit_current_trip_id', currentTripId);
+            renderTripSelect();
+        }
+        loadCurrentTripData();
+    }, { once: true });
+}
+
+function getTripDataCacheKey(tripId) {
+    return `${TRIP_DATA_CACHE_PREFIX}${tripId}`;
+}
+
+function cacheTripData(tripId, data) {
+    if (!tripId || !data) return;
+
+    try {
+        localStorage.setItem(getTripDataCacheKey(tripId), JSON.stringify({
+            version: TRIP_DATA_CACHE_VERSION,
+            savedAt: new Date().toISOString(),
+            data
+        }));
+    } catch (error) {
+        console.warn('Unable to cache trip data.', error);
+    }
+}
+
+function getCachedTripData(tripId) {
+    if (!tripId) return null;
+
+    try {
+        const cached = JSON.parse(localStorage.getItem(getTripDataCacheKey(tripId)) || 'null');
+        if (!cached || cached.version !== TRIP_DATA_CACHE_VERSION || !cached.data) return null;
+        return cached;
+    } catch (error) {
+        console.warn('Unable to read cached trip data.', error);
+        return null;
+    }
+}
+
+function applyCachedDataIfAvailable(tripId) {
+    const cached = getCachedTripData(tripId);
+    if (!cached?.data) return false;
+
+    applyLoadedData(cached.data);
+    renderAll();
+    updateFormDisabledState();
+    return true;
 }
 
 function throwReadonlyPreviewAction(action = '') {
@@ -346,6 +430,79 @@ async function jsonp(action, payload = {}, options = {}) {
     }
 
     throw lastError || new Error('無可用的 GAS JSONP URL');
+}
+
+async function requestGasJson(action, payload = {}, options = {}) {
+    if (isPreviewMode && !READONLY_GAS_ACTIONS.has(action)) throwReadonlyPreviewAction(action);
+
+    const timeoutMs = Number.isFinite(options.timeoutMs) ? Math.max(3000, options.timeoutMs) : 15000;
+
+    let lastError = null;
+
+    for (let index = 0; index < GAS_WEB_APP_URLS.length; index += 1) {
+        const endpoint = GAS_WEB_APP_URLS[index];
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                redirect: 'follow',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify({
+                    action,
+                    payload: payload || {}
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeout);
+
+            if (!response.ok) {
+                const error = new Error(`GAS HTTP error: ${response.status}`);
+                error.code = 'GAS_JSON_HTTP';
+                throw error;
+            }
+
+            const result = await response.json();
+
+            if (!result || result.ok === false) {
+                const error = new Error(result && result.error ? result.error : 'GAS returned an error');
+                error.code = 'GAS_JSON_RESPONSE';
+                throw error;
+            }
+
+            return result.data;
+
+        } catch (error) {
+            clearTimeout(timeout);
+            lastError = error;
+            console.warn(`GAS JSON API failed, switching URL: ${endpoint}`, error);
+        }
+    }
+
+    throw lastError || new Error('No available GAS JSON API URL');
+}
+
+async function requestGas(action, payload = {}, options = {}) {
+    try {
+        return await requestGasJson(action, payload, options);
+    } catch (error) {
+        console.warn('JSON API failed, falling back to JSONP.', error);
+        try {
+            return await jsonp(action, payload, options);
+        } catch (fallbackError) {
+            const combinedError = new Error(
+                `JSON API failed: ${error.message || error}; JSONP fallback failed: ${fallbackError.message || fallbackError}`
+            );
+            combinedError.code = 'GAS_REQUEST_FAILED';
+            combinedError.jsonError = error;
+            combinedError.jsonpError = fallbackError;
+            throw combinedError;
+        }
+    }
 }
 
 async function postToGasBlind(action, payload = {}, options = {}) {
@@ -590,7 +747,7 @@ function toDisplayImageUrl(url) {
 }
 async function loadTrips() {
     try {
-        const data = await jsonp('getTrips', {});
+        const data = await requestGas('getTrips', {});
         const rows = Array.isArray(data) ? data : data.trips || [];
         if (rows.length) {
             trips = rows.map(normalizeTrip).filter(trip => trip.id && trip.name);
@@ -641,7 +798,7 @@ function getLatestTripId() {
 
 async function loadArchivedTrips() {
     try {
-        const data = await jsonp('getArchivedTrips', {});
+        const data = await requestGas('getArchivedTrips', {});
         const rows = Array.isArray(data) ? data : data.archivedTrips || [];
         if (rows.length) {
             archivedTrips = rows.map(row => ({
@@ -660,7 +817,7 @@ async function loadArchivedTrips() {
     renderArchivedTrips();
 }
 
-async function loadCurrentTripData() {
+async function loadCurrentTripDataLegacy() {
     if (isPreviewMode && !currentTripId) {
         clearLoadedTripData();
         renderAll();
@@ -670,7 +827,7 @@ async function loadCurrentTripData() {
 
     setStatus(`正在讀取「${currentTrip().name}」資料...`);
     try {
-        const data = await jsonp('getInitialData', { trip_id: currentTripId });
+        const data = await requestGas('getInitialData', { trip_id: currentTripId });
         applyLoadedData(data);
         setStatus(`已切換到「${currentTrip().name}」。`, 'success');
     } catch (error) {
@@ -693,6 +850,64 @@ async function loadCurrentTripData() {
     }
     renderAll();
     updateFormDisabledState();
+}
+
+async function loadCurrentTripData() {
+    const token = ++activeLoadToken;
+    const tripId = currentTripId;
+
+    if (isPreviewMode && !tripId) {
+        clearLoadedTripData();
+        renderAll();
+        setStatus('Preview link is missing trip_id; unable to load trip data.', 'error');
+        setLoading(false);
+        return;
+    }
+
+    setStatus(`Loading "${currentTrip().name}"...`);
+    setLoading(true);
+    if (!isPreviewMode && applyCachedDataIfAvailable(tripId)) setLoading(true);
+
+    try {
+        const data = await requestGas('getInitialData', { trip_id: tripId });
+        if (token !== activeLoadToken || tripId !== currentTripId) return;
+
+        applyLoadedData(data);
+        cacheTripData(tripId, data);
+        setStatus(`Loaded "${currentTrip().name}".`, 'success');
+    } catch (error) {
+        if (token !== activeLoadToken || tripId !== currentTripId) return;
+        console.warn(error);
+        handleLoadError(error, tripId);
+    } finally {
+        if (token === activeLoadToken) {
+            renderAll();
+            updateFormDisabledState();
+            setLoading(false);
+        }
+    }
+}
+
+function handleLoadError(error, tripId) {
+    const errorDetail = error && error.message ? ` (${error.message})` : '';
+
+    if (isPreviewMode) {
+        clearLoadedTripData();
+        setStatusWithRetry(`Unable to load preview data${errorDetail}. Check that the link is complete and the trip still exists.`, tripId);
+        return;
+    }
+
+    if (applyCachedDataIfAvailable(tripId)) {
+        setStatusWithRetry(`GAS load failed${errorDetail}. Showing cached data; retry when the connection is ready.`, tripId);
+        return;
+    }
+
+    applyFallbackData();
+    const blockedByClient = error && error.code === 'GAS_JSONP_LOAD';
+    const message = blockedByClient
+        ? `GAS JSONP was blocked by the browser or an extension${errorDetail}. Showing local fallback data.`
+        : `Unable to load GAS data${errorDetail}. Showing local fallback data.`;
+    setStatusWithRetry(message, tripId);
 }
 
 function applyLoadedData(data) {
@@ -841,7 +1056,9 @@ function payloadHasReceipts(payload) {
 async function saveThenReload(action, payload, delay = 900) {
     if (isPreviewMode) throwReadonlyPreviewAction(action);
 
+    activeLoadToken += 1;
     const hasReceipts = payloadHasReceipts(payload);
+    setLoading(true);
 
     setStatus(hasReceipts ? '正在上傳收據並寫入 Google Sheet...' : '正在寫入 Google Sheet...');
 
@@ -863,6 +1080,7 @@ async function saveThenReload(action, payload, delay = 900) {
     } catch (error) {
         console.error(error);
         setStatus(`同步失敗：${error.message || error}`, 'error');
+        setLoading(false);
         throw error;
     }
 }
