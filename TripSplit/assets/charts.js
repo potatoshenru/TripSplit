@@ -110,6 +110,23 @@ function getCurrencyRows() {
   return Array.from(totals.values()).sort((a, b) => b.value - a.value);
 }
 
+function groupExpensesByPaymentMethod() {
+  const totals = new Map();
+
+  expenses.forEach(expense => {
+    const amount = Number(expense.twd || 0);
+    if (!amount) return;
+
+    const label = String(expense.payment || expense.paymentMethodId || '').trim() || '未指定';
+    const current = totals.get(label) || { label, value: 0, count: 0 };
+    current.value += amount;
+    current.count += 1;
+    totals.set(label, current);
+  });
+
+  return Array.from(totals.values()).sort((a, b) => b.value - a.value);
+}
+
 function getDailyHeatmapRows() {
   return getExpenseTrendRows();
 }
@@ -436,6 +453,7 @@ function drawHorizontalBarChart(context, rows, width, height, options = {}) {
     ? Math.min(width * 0.35, Math.max(180 * scale, width * 0.22))
     : Math.min(104, Math.max(76, width * 0.28));
   const maxBarWidth = Math.max(36 * scale, chartWidth - valueReserve);
+  const regionType = options.balanceMode ? 'balance' : options.paymentMode ? 'payment_method' : 'payer';
 
   context.strokeStyle = '#e7d8c2';
   context.lineWidth = 1;
@@ -458,11 +476,12 @@ function drawHorizontalBarChart(context, rows, width, height, options = {}) {
     context.fillRect(x, y, barWidth, rowHeight);
 
     chartHitRegions.push({
-      type: options.balanceMode ? 'balance' : 'payer',
+      type: regionType,
       label: item.label,
       value,
       rawValue: item.rawValue,
       direction: item.direction,
+      count: item.count,
       total,
       x,
       y,
@@ -513,9 +532,11 @@ function renderChartLegend(rows, options = {}) {
       || (item.direction ? (item.rawValue < 0 ? '#b84a3d' : '#557f3f') : chartColors[index % chartColors.length]);
     const suffix = options.currencyMode
       ? `（${item.count || 0} 筆｜原始 ${Math.round(item.originalTotal || 0)} ${item.label}）`
-      : options.budgetMode
-        ? `${item.budgetText || `實際 NT$ ${money.format(Math.round(item.value || 0))}`}`
-        : `${item.direction ? `${item.direction} ` : ''}NT$ ${money.format(Math.round(item.value || 0))}`;
+      : options.paymentMode
+        ? `NT$ ${money.format(Math.round(item.value || 0))}${item.count !== undefined ? `（${item.count || 0} 筆）` : ''}`
+        : options.budgetMode
+          ? `${item.budgetText || `實際 NT$ ${money.format(Math.round(item.value || 0))}`}`
+          : `${item.direction ? `${item.direction} ` : ''}NT$ ${money.format(Math.round(item.value || 0))}`;
     const tagName = options.categoryDetail ? 'button' : 'div';
     const typeAttr = options.categoryDetail ? ' type="button"' : '';
     const categoryAttr = options.categoryDetail ? ` data-chart-category-detail="${escapeChartHtml(item.label)}"` : '';
@@ -534,13 +555,14 @@ function formatChartTooltip(region) {
   if (region.type === 'point') return `<strong>日期：${region.label}</strong><span>金額：NT$ ${money.format(Math.round(region.value))}</span><span>占比：${percent}</span>`;
   if (region.type === 'category_trend_point') return `<strong>${region.category}｜${region.label}</strong><span>累積：NT$ ${money.format(Math.round(region.value))}</span>`;
   if (region.type === 'payer') return `<strong>付款人：${region.label}</strong><span>墊付：NT$ ${money.format(Math.round(region.value))}</span><span>占比：${percent}</span>`;
+  if (region.type === 'payment_method') return `<strong>付款方式：${region.label}</strong><span>金額：NT$ ${money.format(Math.round(region.value))}</span><span>筆數：${region.count || 0}</span><span>占比：${percent}</span>`;
   if (region.type === 'balance') return `<strong>${region.label}：${region.direction}</strong><span>金額：NT$ ${money.format(Math.round(region.value))}</span>`;
   if (region.type === 'currency') return `<strong>幣別：${region.label}</strong><span>換算：NT$ ${money.format(Math.round(region.value))}</span><span>原始合計：${Math.round(region.originalTotal || 0)} ${region.label}</span><span>筆數：${region.count || 0}</span>`;
   if (region.type === 'heat_cell') return `<strong>日期：${region.label}</strong><span>花費：NT$ ${money.format(Math.round(region.value))}</span><span>占比：${percent}</span>`;
   if (region.type === 'budget_actual') return `<strong>${region.label}</strong><span>實際：NT$ ${money.format(Math.round(region.value))}</span><span>推估預算：NT$ ${money.format(Math.round(region.budget || 0))}</span>`;
   if (region.type === 'burnup_actual' || region.type === 'burnup_budget') return `<strong>${region.label}</strong><span>${region.series}：NT$ ${money.format(Math.round(region.value))}</span>`;
   if (region.type === 'member_net') return `<strong>${region.member}｜${region.label}</strong><span>淨額：NT$ ${money.format(Math.round(region.value))}</span>`;
-  if (region.type === 'matrix_cell') return `<strong>${region.category} × ${region.member}</strong><span>花費：NT$ ${money.format(Math.round(region.value))}</span>`;
+  if (region.type === 'matrix_cell') return `<strong>${region.category} × 付款人：${region.member}</strong><span>花費：NT$ ${money.format(Math.round(region.value))}</span>`;
   if (region.type === 'weekday') return `<strong>${region.label}</strong><span>總額：NT$ ${money.format(Math.round(region.value))}</span><span>平均：NT$ ${money.format(Math.round(region.avg || 0))}</span><span>筆數：${region.count || 0}</span>`;
   return `<strong>分類：${region.label}</strong><span>金額：NT$ ${money.format(Math.round(region.value))}</span><span>占比：${percent}</span>`;
 }
@@ -567,7 +589,7 @@ function getChartRegionAt(x, y, regions) {
       const angle = Math.atan2(dy, dx);
       return distance >= region.innerRadius && distance <= region.radius && angleIsBetween(angle, region.start, region.end);
     }
-    if (region.type === 'bar' || region.type === 'payer' || region.type === 'balance' || region.type === 'heat_cell' || region.type === 'matrix_cell') {
+    if (region.type === 'bar' || region.type === 'payer' || region.type === 'payment_method' || region.type === 'balance' || region.type === 'heat_cell' || region.type === 'matrix_cell') {
       return x >= region.x && x <= region.x + region.width && y >= region.y && y <= region.y + region.height;
     }
     if (region.x !== undefined && region.y !== undefined && region.radius) {
@@ -629,7 +651,7 @@ function getBudgetVsActualRows() {
   return categoryRows.map((item) => {
     const share = total ? item.value / total : equalShare;
     const budget = Math.max(1000, Math.round(totalBudget * (share * 0.72 + equalShare * 0.28)));
-    return { ...item, budget, budgetText: `實際 NT$ ${money.format(Math.round(item.value))} / 推估 NT$ ${money.format(budget)}` };
+    return { ...item, budget, budgetText: `實際 NT$ ${money.format(Math.round(item.value))} / 推估預算 NT$ ${money.format(budget)}` };
   });
 }
 
@@ -686,6 +708,7 @@ function getCategoryMemberMatrixData() {
   const categoryLabels = groupExpensesByCategory().slice(0, 5).map(item => item.label);
   const memberLabels = members.map(item => item.name).filter(Boolean);
   const valueMap = new Map();
+  // This matrix aggregates by payer; it does not represent split-adjusted personal consumption.
   expenses.forEach((expense) => {
     const category = String(expense.category || '').trim() || '未分類';
     const payer = String(expense.payer || '').trim() || '未指定';
@@ -749,7 +772,7 @@ function drawBudgetCompareChart(context, rows, width, height) {
     context.textAlign = 'left';
     context.fillStyle = '#6b5742';
     context.font = `800 ${10 * scale}px sans-serif`;
-    context.fillText(`實 ${formatCompactMoney(item.value)} / 預 ${formatCompactMoney(item.budget)}`, barsStartX + Math.max(actualWidth, budgetWidth) + 8 * scale, y + rowHeight * 0.68);
+    context.fillText(`實 ${formatCompactMoney(item.value)} / 推估 ${formatCompactMoney(item.budget)}`, barsStartX + Math.max(actualWidth, budgetWidth) + 8 * scale, y + rowHeight * 0.68);
 
     budgetChartHitRegions.push({ type: 'budget_actual', label: item.label, value: item.value, budget: item.budget, x: barsStartX, y, width: Math.max(actualWidth, budgetWidth, 8), height: rowHeight });
   });
@@ -797,7 +820,7 @@ function drawBurnupChart(context, rows, width, height) {
     context.font = `900 ${11 * scale}px sans-serif`;
     context.textAlign = 'right';
     context.fillText(`實際 NT$ ${formatCompactMoney(last.actual)}`, width - 12 * scale, 20 * scale);
-    context.fillText(`預算 NT$ ${formatCompactMoney(last.budget)}`, width - 12 * scale, 36 * scale);
+    context.fillText(`推估預算 NT$ ${formatCompactMoney(last.budget)}`, width - 12 * scale, 36 * scale);
   }
 }
 
@@ -976,9 +999,11 @@ function renderExpenseChart() {
         ? getBalanceChartRows()
         : chartType === 'currency'
           ? getCurrencyRows()
-          : chartType === 'heatmap'
-            ? getDailyHeatmapRows()
-            : groupExpensesByCategory();
+          : chartType === 'payment_method'
+            ? groupExpensesByPaymentMethod()
+            : chartType === 'heatmap'
+              ? getDailyHeatmapRows()
+              : groupExpensesByCategory();
   const { context, width, height } = setupChartCanvas(canvas);
   const hasData = chartType === 'category_trend' ? Boolean(trendData?.series?.length) : rows.length > 0 && rows.some(item => item.value > 0);
   wrap.classList.toggle('is-empty', !hasData);
@@ -1023,6 +1048,11 @@ function renderExpenseChart() {
     return;
   }
 
+  if (chartType === 'payment_method') {
+    drawHorizontalBarChart(context, rows.slice(0, 8), width, height, { paymentMode: true });
+    renderChartLegend(rows.slice(0, 8), { legendSelector: '#chart-legend', paymentMode: true });
+    return;
+  }
   if (chartType === 'payer') drawHorizontalBarChart(context, rows.slice(0, 8), width, height);
   else if (chartType === 'balance') drawHorizontalBarChart(context, rows.slice(0, 8), width, height, { balanceMode: true });
   else drawPieChart(context, rows.slice(0, 8), width, height);
@@ -1111,9 +1141,11 @@ function renderZoomChart() {
           ? getBalanceChartRows()
           : chartType === 'currency'
             ? getCurrencyRows()
-            : chartType === 'heatmap'
-              ? getDailyHeatmapRows()
-              : groupExpensesByCategory();
+            : chartType === 'payment_method'
+              ? groupExpensesByPaymentMethod()
+              : chartType === 'heatmap'
+                ? getDailyHeatmapRows()
+                : groupExpensesByCategory();
 
     const hasData = chartType === 'category_trend' ? Boolean(trendData?.series?.length) : rows.length > 0 && rows.some(item => item.value > 0);
     wrap.classList.toggle('is-empty', !hasData);
@@ -1169,6 +1201,12 @@ function renderZoomChart() {
       return;
     }
 
+    if (chartType === 'payment_method') {
+      drawHorizontalBarChart(context, rows.slice(0, 8), width, height, { paymentMode: true });
+      renderChartLegend(rows.slice(0, 8), { legendSelector: '#chart-zoom-legend', paymentMode: true });
+      finishZoomExpenseChart();
+      return;
+    }
     if (chartType === 'payer') drawHorizontalBarChart(context, rows.slice(0, 8), width, height);
     else if (chartType === 'balance') drawHorizontalBarChart(context, rows.slice(0, 8), width, height, { balanceMode: true });
     else drawPieChart(context, rows.slice(0, 8), width, height);

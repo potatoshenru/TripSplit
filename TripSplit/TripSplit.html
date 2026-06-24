@@ -174,7 +174,8 @@
                                     <label class="chart-option"><input type="radio" name="chart_type" value="line" /><span>每日折線</span></label>
                                     <label class="chart-option"><input type="radio" name="chart_type" value="category_trend" /><span>分類累積</span></label>
                                     <label class="chart-option"><input type="radio" name="chart_type" value="currency" /><span>幣別占比</span></label>
-                                    <label class="chart-option"><input type="radio" name="chart_type" value="heatmap" /><span>每日熱度</span></label>
+                                    <label class="chart-option"><input type="radio" name="chart_type" value="payment_method" /><span>付款方式</span></label>
+                                    <label class="chart-option"><input type="radio" name="chart_type" value="heatmap" /><span>每日花費格狀圖</span></label>
                                     <label class="chart-option"><input type="radio" name="chart_type" value="payer" /><span>付款人</span></label>
                                     <label class="chart-option"><input type="radio" name="chart_type" value="balance" /><span>收付</span></label>
                                 </div>
@@ -189,10 +190,10 @@
 
                             <section class="chart-group-panel" data-chart-group="budget">
                                 <div class="chart-toolbar" role="radiogroup" aria-label="選擇預算監控圖表">
-                                    <label class="chart-option"><input type="radio" name="chart_type_budget" value="budget_actual" checked /><span>預算 vs 實際</span></label>
-                                    <label class="chart-option"><input type="radio" name="chart_type_budget" value="burnup" /><span>累積燒錢趨勢</span></label>
+                                    <label class="chart-option"><input type="radio" name="chart_type_budget" value="budget_actual" checked /><span>推估預算 vs 實際</span></label>
+                                    <label class="chart-option"><input type="radio" name="chart_type_budget" value="burnup" /><span>累積推估趨勢</span></label>
                                     <label class="chart-option"><input type="radio" name="chart_type_budget" value="member_net_trend" /><span>成員淨額變化</span></label>
-                                    <label class="chart-option"><input type="radio" name="chart_type_budget" value="category_member_matrix" /><span>分類×成員熱圖</span></label>
+                                    <label class="chart-option"><input type="radio" name="chart_type_budget" value="category_member_matrix" /><span>分類×付款人熱圖</span></label>
                                     <label class="chart-option"><input type="radio" name="chart_type_budget" value="weekday_distribution" /><span>星期分布</span></label>
                                 </div>
                                 <div class="chart-wrap">
@@ -389,7 +390,7 @@
     <script src="./assets/js/core/config.js?v=1"></script>
     <script src="./assets/js/core/utils.js?v=1"></script>
     <script src="./assets/js/core/state.js?v=1"></script>
-    <script src="./assets/charts.js?v=2"></script>
+    <script src="./assets/charts.js?v=3"></script>
     <script src="./assets/js/ui/status.js?v=1"></script>
     <script src="./assets/js/api/gas.js?v=1"></script>
     <script src="./assets/js/features/receipts.js?v=1"></script>
